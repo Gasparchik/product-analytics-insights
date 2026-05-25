@@ -1,6 +1,8 @@
 # Product Analytics Insights
 
-> Upload a product event CSV → get an interactive dashboard and AI-generated insights in under a minute.
+An AI-powered analytics tool that turns a raw product event CSV into an interactive dashboard, AI-generated insights, and an agent that answers follow-up questions — all in under a minute.
+
+Built with **Claude** (Anthropic), **FastAPI**, and **React + TypeScript**.
 
 ![Dashboard hero — charts, KPIs, and AI insights panel](docs/screenshots/dashboard_1.png)
 
@@ -8,132 +10,153 @@
 
 ## Why I built this
 
-Product managers routinely wait days for ad-hoc analytics — either queueing for a data team or wrestling with BI tools that weren't built for exploration. I wanted to see how far a small focused tool could go: parse raw events, run the standard product analytics suite (engagement / retention / funnel / segments), and let an LLM do the part PMs actually want — turn numbers into a short list of "here's what's interesting, and here's what to do about it."
+Product managers routinely wait days for ad-hoc analytics — queueing for the data team or wrestling with BI tools that weren't built for exploration. I wanted to see how far one focused tool could go: deterministic metrics computed on pandas, plus an LLM that turns the numbers into a short list of "here's what's interesting, here's what to do about it."
+
+---
+
+## What it does
+
+1. **Upload event data** — drop a CSV / XLS-like file, or load the built-in 50K-event SaaS demo dataset
+2. **Map columns** — auto-detection of `user_id` / `timestamp` / `event_name`; any extra columns become segmentation dimensions
+3. **Analyze** — four metric analyzers (engagement, retention, funnel, segments) run in parallel on pandas
+4. **AI insights** — Claude generates 3–5 severity-ranked findings via structured tool use, rendered as proper UI cards
+5. **Ask follow-ups** — an agentic Q&A loop picks analysis tools, runs them on the real DataFrame, and answers with exact numbers
+6. **Compare & export** — switch time windows (7 / 14 / 30 / 90 d or custom), compare to previous period, export the dashboard as PNG
 
 ---
 
 ## Highlights
 
-- **Agentic Q&A** — natural-language follow-up questions handled by a Claude agent that calls analysis tools in a loop and grounds every answer in real data (no hallucinated numbers)
-- **Structured AI insights via tool use** — Claude returns insights as a typed JSON schema (severity, category, tags, metric callout), not free-form text — so the UI can render them as proper cards instead of a blob
-- **Non-blocking analysis pipeline** — four analyzers run in parallel on a thread pool, then AI insights and standard time windows (7/14/30/90d) precompute in the background so window switching is instant
-- **Zero-config column mapping** — heuristic auto-detection of `user_id` / `timestamp` / `event_name` columns; any extra column becomes a segmentation dimension automatically
+- **Agentic Q&A** — natural-language follow-ups handled by a Claude agent that calls analysis tools in a loop and grounds every answer in real data (no hallucinated numbers)
+- **Structured AI insights via tool use** — Claude returns insights as a typed JSON schema (severity, category, tags, metric callout), so the UI renders them as proper cards instead of free-form text
+- **Non-blocking analysis pipeline** — four analyzers run in parallel on a thread pool; AI insights and the 7 / 14 / 30 / 90 d windows precompute in the background so window switching is instant
+- **Zero-config column mapping** — heuristic auto-detection of `user_id` / `timestamp` / `event_name`; any extra column becomes a segmentation dimension automatically
 - **Built end-to-end** — React 18 + TypeScript + Tailwind v4 frontend, FastAPI + Pandas backend, Docker for one-command setup
 
 ---
 
-## Features
+## Demo
 
-The flow follows four steps: **upload → map → analyze → ask**.
+**Upload event data** — drop a CSV with a live row preview, or open the built-in SaaS demo:
 
-### 1. Upload your event CSV
+![Upload screen](docs/screenshots/upload.png)
 
-![Upload page with file preview, demo card and recent datasets](docs/screenshots/upload.png)
+**Map columns** — required fields are auto-detected with a live preview of the mapped rows on the right; extras become segment dimensions:
 
-Drop any CSV of product events and get a live preview of the first rows before you commit. No CSV at hand? One click on **Try demo** loads a built-in 50,310-event / 60-day SaaS dataset. The page also pre-detects exports from **Amplitude, Mixpanel, Segment**, or any custom CSV, and remembers your recent uploads.
+![Column mapping](docs/screenshots/mapping.png)
 
-### 2. Map columns to standard fields
+**Engagement dashboard** — DAU / WAU / MAU and stickiness KPIs, active users over time with annotations, new vs returning split — with time-window presets and an AI insights sidebar:
 
-![Column mapping page with required fields and live preview](docs/screenshots/mapping.png)
+![Engagement dashboard](docs/screenshots/dashboard_1.png)
 
-The mapping screen auto-detects `user_id`, `timestamp`, and `event_name` from common column patterns and shows a live preview of the mapped rows on the right. Any extra columns you keep (platform, country, plan, etc.) automatically become segmentation dimensions on the dashboard. Most datasets confirm in two clicks.
+**Retention** — top events with per-event drill-down, D1 / D3 / D7 / D14 / D30 curves, and a weekly cohort heatmap:
 
-### 3. Explore the dashboard
+![Retention dashboard](docs/screenshots/dashboard_2.png)
 
-#### Engagement
+**Funnel & segments** — drag-and-drop funnel builder with live per-step conversion + biggest-drop callouts; segment donuts with per-segment D7 retention:
 
-![Dashboard top — KPIs and engagement charts](docs/screenshots/dashboard_1.png)
+![Funnel and segments](docs/screenshots/funnel_and_segments.png)
 
-A sticky toolbar lets you switch time windows (7 / 14 / 30 / 90 days, custom range, or "all data"), apply property filters, and toggle **Compare to previous period**. The right rail keeps the AI insights and the agent's "Ask anything" box always in reach.
+**AI insights** — 3–5 severity-ranked cards with typed categories, metric callouts, and tags — generated via Claude's structured tool use:
 
-The Engagement section computes DAU / WAU / MAU, stickiness, and average events per user, then plots active users over time with annotations and a Day / Week / Month granularity toggle, plus a new-vs-returning breakdown.
+![AI insights panel](docs/screenshots/insights.png)
 
-#### Retention
+**Agentic Q&A** — ask in plain English; the agent picks 1–6 analysis tools, runs them, and answers with exact numbers — every tool call visible in the accordion:
 
-![Dashboard middle — top events and retention](docs/screenshots/dashboard_2.png)
-
-Top-events horizontal bar chart with per-event click-through to the daily trend. The retention block computes a D-day curve (D1 / D3 / D7 / D14 / D30) and a weekly cohort heatmap so you can see whether retention is getting better or worse over time.
-
-#### Funnel + segments
-
-![Dashboard bottom — funnel builder and segments donut](docs/screenshots/funnel_and_segments.png)
-
-The funnel is a live builder: drag steps to reorder, pick any event for any step, and the per-step conversion + biggest drop recompute on the fly. Below it, segment breakdowns turn every kept property into a donut + share table with per-segment D7 retention attached.
-
-### 4. AI-generated insights
-
-![Insights panel with severity-sorted cards and metric callouts](docs/screenshots/insights.png)
-
-Claude reads the full metric summary and returns 3–5 specific findings sorted by severity. Each card has a typed category, optional metric callout (e.g. "−15% share"), and tags — rendered as proper UI cards because the agent submits insights through a strict JSON schema rather than free-form text. Filter by severity / category, pin the ones that matter, dismiss the rest.
-
-### 5. Ask follow-up questions
-
-![Q&A agent answering a question with tool calls, charts, and prose](docs/screenshots/qa.png)
-
-Click an insight or type a question in plain English ("Why is mobile D3 retention dropping?"). The agent picks the right analysis tools, runs them on the real DataFrame, and answers with exact numbers — no hallucinated figures. The tools accordion shows what was computed, inline charts render when the tool returns one, and the prose answer highlights key metrics. Related questions and a follow-up box let you keep digging in the same session.
+![Q&A page with agent answer](docs/screenshots/qa.png)
 
 ---
 
 ## Tech stack
 
-| Layer | Stack |
+| Layer | Technology |
 |---|---|
-| Frontend | React 18, TypeScript, Vite, Tailwind CSS v4, Zustand, Recharts, React Router |
-| Backend | FastAPI, Python 3.11, Pandas, asyncio |
-| AI | Anthropic Claude (tool use for structured insights + agentic Q&A) |
-| Infra | Docker + docker-compose |
+| AI | Claude Sonnet via [Anthropic SDK](https://github.com/anthropics/anthropic-sdk-python) (structured tool use + agentic loop) |
+| Backend | Python 3.11 · FastAPI · Pandas · asyncio |
+| Frontend | React 18 · TypeScript · Vite 5 · Tailwind CSS v4 · Zustand · Recharts · react-markdown |
+| Storage | JSON file storage (`backend/data/`) |
+| Deploy | Docker + docker-compose |
 
 ---
 
-## Quick start
+## Prerequisites
 
-### Docker (recommended)
+- [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) **or** Python 3.11+ and Node 18+
+- An [Anthropic API key](https://console.anthropic.com/)
+
+---
+
+## Quick start (Docker)
 
 ```bash
+# 1. Clone the repo
 git clone https://github.com/Gasparchik/product-analytics-insights.git
 cd product-analytics-insights
-
-cp .env.example .env
-# Set ANTHROPIC_API_KEY in .env
-
-docker-compose up
 ```
 
-Open [http://localhost:5173](http://localhost:5173) and click **Try demo dataset**.
+```bash
+# 2. Create .env from the example
+# Mac / Linux / Git Bash:
+cp .env.example .env
+# Windows PowerShell:
+# Copy-Item .env.example .env
+```
 
-### Local dev
-
-**Prerequisites:** Python 3.11+, Node 18+
-
-**1. Backend** — from the project root:
+Open `.env` and set `ANTHROPIC_API_KEY=sk-ant-...`
 
 ```bash
-# Create and activate a virtualenv
-python -m venv .venv
-source .venv/bin/activate          # Linux / macOS
-.venv\Scripts\activate             # Windows PowerShell
+# 3. Build and run
+docker compose up --build
+```
 
+Open **http://localhost:5173** in your browser and click **Try demo**.
+
+---
+
+## Manual setup (without Docker)
+
+### Backend
+
+```bash
+# From the project root — create a virtual environment
+# Mac / Linux:
+python3 -m venv .venv && source .venv/bin/activate
+# Windows PowerShell:
+# python -m venv .venv; .venv\Scripts\Activate.ps1
+
+# Install dependencies
 pip install -r backend/requirements.txt
+```
 
+Create a `.env` file at the **project root**:
+
+```bash
+# Mac / Linux / Git Bash:
 cp .env.example .env
-# Set ANTHROPIC_API_KEY in .env
+# Windows PowerShell:
+# Copy-Item .env.example .env
+```
 
-python -m uvicorn backend.main:app --reload
-# → http://localhost:8000
+Then open `.env` and set `ANTHROPIC_API_KEY=sk-ant-...`
+
+```bash
+# Start the server (from the project root)
+python -m uvicorn backend.main:app --reload --port 8000
 ```
 
 Verify it's running: [http://localhost:8000/api/health](http://localhost:8000/api/health) should return `{"status":"ok"}`.
 
-**2. Frontend** — in a **second terminal**:
+### Frontend
 
 ```bash
 cd frontend
 npm install
 npm run dev
-# → http://localhost:5173
 ```
 
-Open [http://localhost:5173](http://localhost:5173) and click **Try demo dataset**.
+Open **http://localhost:5173** and click **Try demo**.
+
+> The Vite dev server proxies `/api/*` to `http://localhost:8000` automatically.
 
 ---
 
@@ -141,15 +164,15 @@ Open [http://localhost:5173](http://localhost:5173) and click **Try demo dataset
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `ANTHROPIC_API_KEY` | Yes | — | Without it, charts still work — AI insights and Q&A are skipped |
-| `ALLOWED_ORIGINS` | No | `http://localhost:5173,http://localhost:3000` | Comma-separated CORS origins |
-| `ENVIRONMENT` | No | `development` | `development` or `production` |
+| `ANTHROPIC_API_KEY` | **yes** | — | Without it, charts still work but AI insights and Q&A are skipped |
+| `ALLOWED_ORIGINS` | no | `http://localhost:5173,http://localhost:3000` | Comma-separated CORS origins |
+| `ENVIRONMENT` | no | `development` | `development` or `production` |
 
 ---
 
 ## CSV format
 
-Any CSV with at least three columns works. Mapping happens during onboarding:
+Any CSV with at least three columns works — the mapping screen auto-detects roles:
 
 | Role | Example column names auto-detected |
 |---|---|
@@ -157,40 +180,56 @@ Any CSV with at least three columns works. Mapping happens during onboarding:
 | Timestamp | `timestamp`, `created_at`, `event_time` |
 | Event name | `event_name`, `event`, `action` |
 
-Extra columns (platform, country, plan, etc.) become segment dimensions automatically.
+Extra columns (platform, country, plan, etc.) become segmentation dimensions automatically.
 
 ---
 
 ## Architecture notes
 
-**Non-blocking analysis pipeline.** When you click Analyze, the four metric analyzers run in parallel on a `ThreadPoolExecutor` and the API returns in 1–3 seconds for typical datasets. AI insight generation and pre-computation of the 7 / 14 / 30 / 90-day time windows happen in an `asyncio.create_task` so they don't block the response. A toast notification surfaces when background insights are ready. Window switches that hit pre-computed cache are instant.
+**Non-blocking analysis pipeline.** Four analyzers run in parallel on a `ThreadPoolExecutor` and the API returns in 1–3 seconds for typical datasets. AI insight generation and pre-computation of the 7 / 14 / 30 / 90-day time windows happen in `asyncio.create_task` so they don't block the response. A toast notification surfaces when background insights are ready.
 
-**Agentic Q&A loop.** The Q&A agent runs in a FastAPI `BackgroundTasks` task and loops up to 6 turns. Each turn the agent picks tools from a registry (retention lookup, funnel recompute, segment filter, etc.), the backend executes them on the in-memory DataFrame, and tool results flow back to Claude until it produces a final text answer. Every tool call (name, inputs, output preview, duration) is stored alongside the answer for full transparency.
+**Structured insight output.** Insights are produced by forcing Claude to call a single `submit_insights` tool with a strict JSON schema (enum-constrained type / severity / category, optional metric callout). The frontend renders them as proper cards without fragile parsing.
 
-**Structured insight output.** Insights are not generated as free-form text — Claude is forced to call a single `submit_insights` tool with a strict JSON schema (enum-constrained type / severity / category, optional metric callout). This makes the output reliably renderable as UI cards and lets the frontend sort / filter without fragile parsing.
+**Agentic Q&A loop.** The Q&A agent runs in a FastAPI `BackgroundTasks` task and loops up to 6 turns. Each turn the agent picks tools from a registry (retention lookup, funnel recompute, segment filter, etc.), the backend executes them on the in-memory DataFrame, and tool results flow back to Claude until it produces a final markdown answer. Every tool call (name, inputs, output preview, duration) is stored alongside the answer for full transparency.
 
-**Caching.** Analysis results are stored as JSON on disk keyed by `source_id + date range`. Subsequent requests for the same window return immediately.
+**Caching.** Analysis results are stored as JSON on disk keyed by `source_id + date range`. Subsequent requests for the same window return immediately; stale empty-insight caches self-heal by triggering background regeneration on `GET`.
 
 ---
 
 ## Project structure
 
 ```
-backend/
-  api/          # FastAPI routes: sources, analysis, questions
-  analyzers/    # Pandas-based metric computation (engagement, retention, funnel, segments)
-  ai/           # Claude client, insights generator, Q&A tools
-  demo/         # Demo dataset generator
-  models/       # Pydantic models
-  storage/      # JSON file storage layer
-
-frontend/
-  src/
-    components/ # Upload, Mapping, Dashboard, Question pages + shared UI
-    store/      # Zustand stores
-    api/        # Typed API client
-    pages/      # Route-level pages
+product-analytics-insights/
+├── backend/
+│   ├── api/                 # FastAPI routes: sources, analysis, questions
+│   ├── analyzers/           # Pandas-based metric computation
+│   ├── ai/                  # Claude client, insights generator, Q&A tools
+│   ├── demo/                # Demo dataset generator
+│   ├── models/              # Pydantic models
+│   ├── storage/             # JSON file storage layer
+│   ├── main.py              # FastAPI entry point
+│   ├── config.py
+│   ├── requirements.txt
+│   └── Dockerfile
+├── frontend/
+│   ├── src/
+│   │   ├── components/      # Upload, Mapping, Dashboard, Question + Layout
+│   │   ├── store/           # Zustand stores (analysisStore, sourceStore)
+│   │   ├── api/             # Typed API client
+│   │   ├── ui/              # Reusable UI primitives (charts, cards, forms)
+│   │   └── pages/           # Route-level pages
+│   └── Dockerfile
+├── docs/screenshots/        # README screenshots
+├── docker-compose.yml
+├── .env.example
+└── LICENSE
 ```
+
+---
+
+## License
+
+MIT — see [LICENSE](LICENSE).
 
 ---
 
