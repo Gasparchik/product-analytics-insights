@@ -1,0 +1,17 @@
+{
+  "name": "TaskFlow Demo Dataset",
+  "description": "Synthetic SaaS task manager \u2014 5k users, 60-day window, 6 baked-in patterns",
+  "users": 5000,
+  "events": 50310,
+  "period_days": 60,
+  "start_date": "2024-03-01T00:00:00",
+  "seed": 42,
+  "patterns": [
+    "Pattern 1 \u2014 Google Ads retention: D7 ~12% vs ~32% for other channels",
+    "Pattern 2 \u2014 Power users + integrations: 90% connect integration in first 3 days vs 15% others",
+    "Pattern 3 \u2014 Signup funnel: signup \u2192 65% project_created \u2192 45% task_created \u2192 35% task_completed",
+    "Pattern 4 \u2014 Platform retention: Web 35%, iOS 28%, Android 18% at D7",
+    "Pattern 5 \u2014 Monetization: team_invited users 22% paid conversion vs 3% without",
+    "Pattern 6 \u2014 Day 35 anomaly: DAU drops ~30% from trend"
+  ]
+}

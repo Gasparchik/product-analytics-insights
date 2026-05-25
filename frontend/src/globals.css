@@ -1,0 +1,97 @@
+@import "tailwindcss";
+@import "./tokens.css";
+
+/* Geist — variable fonts (copied to public/fonts at build setup) */
+@font-face {
+  font-family: 'Geist';
+  src: url('/fonts/Geist-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/fonts/GeistMono-Variable.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  /* Colors — reference CSS vars from tokens.css */
+  --color-bg:            var(--bg);
+  --color-surface:       var(--surface);
+  --color-surface-2:     var(--surface-2);
+  --color-surface-3:     var(--surface-3);
+  --color-border:        var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-fg:            var(--fg);
+  --color-fg-muted:      var(--fg-muted);
+  --color-fg-subtle:     var(--fg-subtle);
+  --color-accent:        var(--accent);
+  --color-accent-hover:  var(--accent-hover);
+  --color-accent-fg:     var(--accent-fg);
+  --color-accent-tint:   var(--accent-tint);
+  --color-danger:        var(--danger);
+  --color-warning:       var(--warning);
+  --color-success:       var(--success);
+  --color-info:          var(--info);
+  --color-danger-tint:   var(--danger-tint);
+  --color-warning-tint:  var(--warning-tint);
+  --color-success-tint:  var(--success-tint);
+  --color-info-tint:     var(--info-tint);
+
+  /* Fonts — direct values (var() refs would be circular with tokens.css) */
+  --font-sans: 'Geist', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Radii */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+
+  /* Shadows */
+  --shadow-sm: var(--shadow-1);
+  --shadow-md: var(--shadow-2);
+  --shadow-lg: var(--shadow-3);
+}
+
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    letter-spacing: -0.005em;
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+  }
+  select option { padding: 4px 10px; }
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.5;
+    padding: 0 2px 0 4px;
+    margin: 0;
+  }
+  input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 0.85;
+  }
+}
+
+@keyframes skeleton {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes indeterminate-bar {
+  0%   { transform: translateX(-100%); }
+  50%  { transform: translateX(0%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes spin {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

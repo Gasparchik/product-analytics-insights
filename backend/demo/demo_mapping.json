@@ -1,0 +1,8 @@
+{
+  "user_id": "user_id",
+  "timestamp": "timestamp",
+  "event_name": "event_name",
+  "properties": "platform,channel,plan",
+  "signup_event": "signup",
+  "conversion_event": "subscription_started"
+}
