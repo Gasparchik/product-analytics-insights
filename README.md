@@ -8,6 +8,14 @@ Built with **Claude** (Anthropic), **FastAPI**, and **React + TypeScript**.
 
 ---
 
+## Live demo
+
+**[Live demo →](https://your-deploy-url-here)** *(link coming soon)*
+
+The demo uses pre-computed AI results so it's free to explore with no API key required. Clone the repo and add your Anthropic API key to run live analysis on your own data.
+
+---
+
 ## Why I built this
 
 Product managers routinely wait days for ad-hoc analytics — queueing for the data team or wrestling with BI tools that weren't built for exploration. I wanted to see how far one focused tool could go: deterministic metrics computed on pandas, plus an LLM that turns the numbers into a short list of "here's what's interesting, here's what to do about it."
@@ -165,6 +173,7 @@ Open **http://localhost:5173** and click **Try demo**.
 | Variable | Required | Default | Description |
 |---|---|---|---|
 | `ANTHROPIC_API_KEY` | **yes** | — | Without it, charts still work but AI insights and Q&A are skipped |
+| `DEMO_MODE` | no | `false` | Set to `true` for public deployments — AI is served from the pre-computed snapshot for the demo dataset; AI features are disabled for custom uploads |
 | `ALLOWED_ORIGINS` | no | `http://localhost:5173,http://localhost:3000` | Comma-separated CORS origins |
 | `ENVIRONMENT` | no | `development` | `development` or `production` |
 
@@ -193,6 +202,8 @@ Extra columns (platform, country, plan, etc.) become segmentation dimensions aut
 **Agentic Q&A loop.** The Q&A agent runs in a FastAPI `BackgroundTasks` task and loops up to 6 turns. Each turn the agent picks tools from a registry (retention lookup, funnel recompute, segment filter, etc.), the backend executes them on the in-memory DataFrame, and tool results flow back to Claude until it produces a final markdown answer. Every tool call (name, inputs, output preview, duration) is stored alongside the answer for full transparency.
 
 **Caching.** Analysis results are stored as JSON on disk keyed by `source_id + date range`. Subsequent requests for the same window return immediately; stale empty-insight caches self-heal by triggering background regeneration on `GET`.
+
+**Demo snapshot.** The public demo never calls Claude at runtime. AI insights and 6 pre-computed Q&A answers are generated once locally via `python -m backend.demo.generate_snapshot` and committed to `backend/demo/snapshot.json`. The backend serves the snapshot when `is_demo=true`; the frontend is unaware of the difference.
 
 ---
 

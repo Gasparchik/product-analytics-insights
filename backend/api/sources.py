@@ -178,7 +178,7 @@ async def save_mapping(
 
 @router.post("/from_demo")
 async def create_from_demo():
-    """Create a source from the built-in TaskFlow demo dataset."""
+    """Create (or return existing) source from the built-in TaskFlow demo dataset."""
     from backend.demo.generate_demo import OUTPUT_DIR, generate, FIELDNAMES
 
     demo_csv = OUTPUT_DIR / "demo_dataset.csv"
@@ -191,7 +191,12 @@ async def create_from_demo():
     if not demo_csv.exists():
         raise HTTPException(status_code=500, detail="Demo dataset could not be generated")
 
-    source_id = str(uuid.uuid4())
+    # Fixed source_id so the snapshot always matches
+    source_id = "demo"
+    existing = storage.get(source_id)
+    if existing:
+        return {"source_id": source_id}
+
     dest_csv = DATA_DIR / f"{source_id}.csv"
     shutil.copy2(demo_csv, dest_csv)
 
@@ -221,13 +226,13 @@ async def create_from_demo():
         id=source_id,
         type="product_events",
         name="TaskFlow Demo Dataset",
+        is_demo=True,
         metadata={
             "columns": columns,
             "detected_format": "custom",
             "total_rows": total_rows,
             "preview_rows": preview_rows,
             "mapping": mapping,
-            "is_demo": True,
         },
     )
     storage.save(source.model_dump(mode="json"))

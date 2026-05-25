@@ -167,11 +167,51 @@ def _fail_question(question_id: str, error: str) -> None:
         questions_storage.save(q)
 
 
+@router.get("/demo/suggestions")
+async def get_demo_suggestions():
+    from backend.ai.demo_playback import get_demo_suggestions
+    return {"suggestions": get_demo_suggestions()}
+
+
 @router.post("/")
 async def ask_question(payload: QuestionCreate, background_tasks: BackgroundTasks):
+    from backend.config import settings
+
     source = sources_storage.get(payload.source_id)
     if not source:
         raise HTTPException(status_code=404, detail="Source not found")
+
+    # Demo source: serve from snapshot or reject free-form
+    if source.get("is_demo"):
+        from backend.ai.demo_playback import get_demo_answer
+        entry = get_demo_answer(payload.text)
+        if entry is None:
+            raise HTTPException(
+                status_code=403,
+                detail="Custom questions are disabled in demo. Clone the repo and add your API key to ask anything.",
+            )
+        now = datetime.utcnow().isoformat()
+        q = {
+            "id": str(uuid.uuid4()),
+            "source_id": payload.source_id,
+            "text": payload.text,
+            "status": "completed",
+            "answer_text": entry.get("answer_markdown", ""),
+            "tools_used": entry.get("tools_used", []),
+            "charts": entry.get("charts", []),
+            "created_at": now,
+            "completed_at": now,
+            "error": None,
+        }
+        questions_storage.save(q)
+        return q
+
+    # Public demo mode: AI disabled for non-demo sources
+    if settings.demo_mode:
+        raise HTTPException(
+            status_code=403,
+            detail="AI features are disabled in the public demo. Clone the repo and add your API key to enable them.",
+        )
 
     q = {
         "id": str(uuid.uuid4()),

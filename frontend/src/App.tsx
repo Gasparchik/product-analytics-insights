@@ -1,4 +1,4 @@
-import { Component, ReactNode } from 'react'
+import { Component, ReactNode, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout/Layout'
 import Upload from './components/Upload/Upload'
@@ -6,6 +6,8 @@ import Mapping from './components/Mapping/Mapping'
 import Dashboard from './components/Dashboard/Dashboard'
 import Question from './components/Question/Question'
 import Playground from './pages/Playground'
+import { api } from './api'
+import { useSourceStore } from './store/sourceStore'
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
   state = { error: null }
@@ -31,9 +33,18 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
   }
 }
 
+function ConfigLoader() {
+  const setDemoMode = useSourceStore(s => s.setDemoMode)
+  useEffect(() => {
+    api.config().then(({ data }) => setDemoMode(data.demo_mode)).catch(() => {})
+  }, [])
+  return null
+}
+
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <ConfigLoader />
       <ErrorBoundary>
         <Routes>
           <Route path="/playground" element={<Playground />} />

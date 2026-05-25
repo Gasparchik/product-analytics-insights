@@ -89,7 +89,7 @@ const FORMATS = ['Amplitude export', 'Mixpanel export', 'Custom CSV', 'Segment e
 
 export default function Upload() {
   const navigate = useNavigate()
-  const { setActiveSource, setPreview } = useSourceStore()
+  const { setActiveSource, setPreview, demoMode } = useSourceStore()
   const fileRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
   const [hover, setHover] = useState(false)
@@ -198,6 +198,15 @@ export default function Upload() {
 
   return (
     <div className="flex-1 flex flex-col items-center justify-start px-6 pt-24 pb-16 gap-8">
+      {/* Demo mode banner */}
+      {demoMode && (
+        <div
+          className="w-full max-w-[700px] text-[13px] text-center rounded-lg px-4 py-3 leading-[1.5]"
+          style={{ background: 'var(--accent-tint)', color: 'var(--accent)', border: '1px solid color-mix(in oklch, var(--accent) 25%, transparent)' }}
+        >
+          This is a public demo — AI features are disabled for custom uploads. Clone the repo and add your API key to run live analysis on your own data.
+        </div>
+      )}
       {/* Hero */}
       <div className="text-center max-w-[620px]">
         <h1 className="text-[32px] font-medium tracking-[-0.5px] text-fg leading-tight mb-3">

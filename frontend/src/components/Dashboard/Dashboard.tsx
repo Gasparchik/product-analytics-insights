@@ -1775,6 +1775,7 @@ function DatasetHeaderStrip({ analysisStatus, filteredStatus, onExportPage, expo
   const name = activeSource?.name ?? 'events_2026_q1.csv'
   const format = activeSource?.metadata?.detected_format ?? 'amplitude'
   const totalRows = activeSource?.metadata?.total_rows
+  const isDemo = activeSource?.is_demo ?? false
 
   const run = source_id ? getRun(source_id) : null
   const engData = run?.results.find(r => r.name === 'engagement')?.data as Record<string, unknown> | undefined
@@ -1794,6 +1795,7 @@ function DatasetHeaderStrip({ analysisStatus, filteredStatus, onExportPage, expo
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[13px] font-mono text-fg">{name}</span>
             <Tag tone="neutral">{format.charAt(0).toUpperCase() + format.slice(1)}</Tag>
+            {isDemo && <Tag tone="accent">Demo</Tag>}
             {isBusy && (
               <span
                 className="inline-flex items-center gap-[6px] text-[12px] font-medium px-[10px] py-[3px] rounded-full"
@@ -2228,10 +2230,23 @@ interface RecentQ { id: string; question: string; askedAt: string }
 function QASidePanel() {
   const navigate = useNavigate()
   const { source_id } = useParams<{ source_id: string }>()
+  const { activeSource, demoMode } = useSourceStore()
+  const isDemo = activeSource?.is_demo ?? false
+
   const [draft, setDraft] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [questions, setQuestions] = useState<RecentQ[]>(DEMO_QUESTIONS)
+  const [demoSuggestions, setDemoSuggestions] = useState<string[]>([])
+  const [demoHint, setDemoHint] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Fetch pre-computed suggestions for demo source
+  useEffect(() => {
+    if (!isDemo) return
+    api.questions.getDemoSuggestions()
+      .then(({ data }) => setDemoSuggestions(data.suggestions))
+      .catch(() => {})
+  }, [isDemo])
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -2251,9 +2266,15 @@ function QASidePanel() {
     'Where do users drop in the funnel?',
   ]
 
-  async function handleSubmit() {
-    const q = draft.trim()
+  async function handleSubmit(questionText?: string) {
+    const q = (questionText ?? draft).trim()
     if (!q || !source_id || submitting) return
+    if (isDemo && !questionText) {
+      // Free-form input in demo — show hint instead of submitting
+      setDemoHint(true)
+      setTimeout(() => setDemoHint(false), 4000)
+      return
+    }
     setSubmitting(true)
     try {
       const { data } = await api.questions.ask({ source_id, text: q })
@@ -2261,7 +2282,6 @@ function QASidePanel() {
       setDraft('')
       navigate(`/question/${data.id}`)
     } catch {
-      // fallback: navigate with question in state so Question page can show it
       const id = 'q-' + Date.now()
       setQuestions(prev => [{ id, question: q, askedAt: 'just now' }, ...prev])
       navigate(`/question/${id}`, { state: { question: q } })
@@ -2293,21 +2313,33 @@ function QASidePanel() {
           <h2 className="text-[14px] font-medium text-fg m-0">Ask anything</h2>
         </div>
         <p className="text-[13px] text-fg-muted mt-[6px] leading-[1.4]">
-          The agent will pick the right analytical tools, run them on your data, and explain what it found.
+          {isDemo
+            ? 'Pre-computed answers from the demo dataset. Clone the repo to ask your own questions.'
+            : 'The agent will pick the right analytical tools, run them on your data, and explain what it found.'}
         </p>
       </div>
 
-      <AskField value={draft} onChange={setDraft} onSubmit={handleSubmit} disabled={submitting} textareaRef={textareaRef} />
+      {/* Demo hint when user tries to type freely */}
+      {demoHint && (
+        <div
+          className="text-[12px] leading-[1.4] rounded-md px-3 py-2"
+          style={{ background: 'var(--accent-tint)', color: 'var(--accent)', border: '1px solid color-mix(in oklch, var(--accent) 25%, transparent)' }}
+        >
+          Custom questions need your own API key — clone the repo to try.
+        </div>
+      )}
+
+      {!isDemo && <AskField value={draft} onChange={setDraft} onSubmit={() => handleSubmit()} disabled={submitting} textareaRef={textareaRef} />}
 
       {/* Suggestions */}
       <div>
-        <div className="text-[11px] text-fg-subtle mb-2">Try</div>
+        <div className="text-[11px] text-fg-subtle mb-2">{isDemo ? 'Pre-computed questions' : 'Try'}</div>
         <div className="flex flex-col gap-[6px]">
-          {suggestions.map((s, i) => (
+          {(isDemo ? demoSuggestions : suggestions).map((s, i) => (
             <button
               key={i}
               type="button"
-              onClick={() => setDraft(s)}
+              onClick={() => isDemo ? handleSubmit(s) : setDraft(s)}
               className="flex items-start gap-[6px] text-left px-[10px] py-2 bg-surface-2 border border-border rounded-md text-[13px] text-fg-muted leading-[1.4] cursor-pointer transition-colors duration-[100ms] hover:text-fg"
             >
               <span className="text-fg-subtle leading-5 flex-shrink-0">↗</span>
@@ -3077,33 +3109,26 @@ export default function Dashboard() {
     try { sessionStorage.setItem(WIN_STORAGE_KEY, JSON.stringify(w)) } catch {}
   }
 
-  // Initial full-dataset load (runs once per source_id)
+  // Initial full-dataset load (runs once per source_id).
+  // POST /run returns cached results if available, so no GET→404 round-trip needed.
   useEffect(() => {
     if (!source_id) return
     if (getRun(source_id)) { setAnalysisStatus('done'); return }
     setAnalysisStatus('loading')
 
-    function runFresh() {
-      return api.analysis.run(source_id!)
-        .then(({ data }) => { setRun(source_id!, data as any); setAnalysisStatus('done') })
-        .catch(() => setAnalysisStatus('error'))
-    }
-
-    api.analysis.get(source_id)
+    api.analysis.run(source_id)
       .then(({ data }) => {
-        // If cached result predates chart_specs support, force a fresh run
+        // If cached result predates chart_specs support, run again to refresh
         const hasChartSpecs = (data as any).results?.some((r: any) => r.chart_specs?.length > 0)
-        if (!hasChartSpecs) return runFresh()
+        if (!hasChartSpecs) {
+          return api.analysis.run(source_id)
+            .then(({ data: fresh }) => { setRun(source_id, fresh as any); setAnalysisStatus('done') })
+            .catch(() => setAnalysisStatus('error'))
+        }
         setRun(source_id, data as any)
         setAnalysisStatus('done')
       })
-      .catch((err) => {
-        if (err?.response?.status === 404) {
-          runFresh()
-        } else {
-          setAnalysisStatus('error')
-        }
-      })
+      .catch(() => setAnalysisStatus('error'))
   }, [source_id])
 
   // Filtered analysis: runs when window or base analysis status changes.
@@ -3138,23 +3163,35 @@ export default function Dashboard() {
     setActiveKey(null)
     setFilteredStatus('loading')
 
-    api.analysis.get(source_id, dateRange)
+    api.analysis.run(source_id, dateRange)
       .then(({ data }) => { setRun(key, data as any); setActiveKey(key); setFilteredStatus('done') })
-      .catch((err) => {
-        if (err?.response?.status === 404) {
-          api.analysis.run(source_id, dateRange)
-            .then(({ data }) => { setRun(key, data as any); setActiveKey(key); setFilteredStatus('done') })
-            .catch(() => setFilteredStatus('error'))
-        } else {
-          setFilteredStatus('error')
-        }
-      })
+      .catch(() => setFilteredStatus('error'))
   }, [source_id, win, analysisStatus])
 
   const isBusy = analysisStatus === 'loading' || filteredStatus === 'loading'
 
+  const isDemo = activeSource?.is_demo ?? false
+
   return (
     <div className="flex-1 flex flex-col">
+      {/* Demo banner */}
+      {isDemo && (
+        <div
+          className="text-[12px] text-center py-[8px] px-4 leading-[1.4]"
+          style={{ background: 'var(--accent-tint)', color: 'var(--accent)', borderBottom: '1px solid color-mix(in oklch, var(--accent) 20%, transparent)' }}
+        >
+          You're viewing a live demo with pre-computed AI results.{' '}
+          <a
+            href="https://github.com/Gasparchik/product-analytics-insights"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline font-medium"
+          >
+            Clone the repo
+          </a>{' '}
+          and add your Anthropic API key to analyze your own data.
+        </div>
+      )}
       {/* Sticky toolbar */}
       <div
         className="sticky z-[5] border-b border-border pb-[14px]"

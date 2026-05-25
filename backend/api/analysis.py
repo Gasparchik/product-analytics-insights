@@ -266,6 +266,20 @@ async def _precompute_windows(source_id: str, source: dict, mapping: dict, df=No
 
 async def _generate_insights_safe(run: dict, source: dict) -> list:
     from backend.config import settings
+
+    # Demo source: always serve from snapshot, never call Claude
+    if source.get("is_demo"):
+        from backend.ai.demo_playback import get_demo_insights
+        insights = get_demo_insights()
+        if insights:
+            return insights
+        logger.warning("Demo snapshot has no insights yet — run generate_snapshot.py")
+        return []
+
+    # Public demo mode: AI disabled for non-demo sources
+    if settings.demo_mode:
+        return []
+
     if not settings.anthropic_api_key:
         logger.warning("ANTHROPIC_API_KEY not set — skipping insight generation")
         return []

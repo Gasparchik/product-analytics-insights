@@ -5,6 +5,7 @@ const http = axios.create({ baseURL: '/api' })
 
 export const api = {
   health: () => http.get<{ status: string }>('/health'),
+  config: () => http.get<{ demo_mode: boolean }>('/config'),
 
   sources: {
     list: () => http.get<Source[]>('/sources/'),
@@ -69,5 +70,7 @@ export const api = {
     get: (id: string) => http.get<Question>(`/questions/${id}`),
     listForSource: (sourceId: string) =>
       http.get<Question[]>(`/questions/source/${sourceId}`),
+    getDemoSuggestions: () =>
+      http.get<{ suggestions: string[] }>('/questions/demo/suggestions'),
   },
 }

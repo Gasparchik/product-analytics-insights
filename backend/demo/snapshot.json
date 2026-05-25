@@ -1,0 +1,774 @@
+{
+  "dataset_version": "taskflow-v1",
+  "generated_at": "2026-05-25T18:17:18.951707",
+  "insights": [
+    {
+      "id": "f715318f-a25e-4b6c-bdd5-268253276b14",
+      "source_id": "demo",
+      "type": "funnel_drop",
+      "category": "Funnel",
+      "title": "Signup-to-subscription conversion is 0.7% — a near-total breakdown",
+      "description": "Of 4,963 users who signed up, only 35 ever started a subscription — a 99.3% drop in the direct funnel. However, the activation funnel tells a more nuanced story: 6.5% (324 users) did reach subscription_started when tracked via unique users through the full activation flow. The critical bottleneck is the gap between task_completed (34.8% of signups) and subscription_started (6.5%) — meaning 1,404 users who completed a task still never converted to paid. These users have demonstrated core value but aren't being pushed to upgrade. Investigate what friction exists at the paywall (timing, placement, pricing page clarity) and test a targeted upsell prompt triggered immediately after a user completes their first task.",
+      "metrics": {
+        "metric_value": "99.3%",
+        "metric_label": "drop from signup to subscription_started"
+      },
+      "tags": [
+        "funnel",
+        "monetization",
+        "activation"
+      ],
+      "severity": "high",
+      "created_at": "2026-05-25T18:15:38.115032"
+    },
+    {
+      "id": "6fd2b912-e892-4259-b599-1aa3df191928",
+      "source_id": "demo",
+      "type": "segment_difference",
+      "category": "Acquisition",
+      "title": "Google Ads users retain at 11.6% D7 vs. 33.8% for Referral — a 3x gap",
+      "description": "Google Ads is the second-largest acquisition channel (1,499 users, 30.1% of total), but its D7 retention of 11.6% is by far the worst across all channels — 2.6x below Referral (33.8%) and 2.6x below Organic (29.9%). This means nearly 30% of the user base is being acquired at high ad spend but churning at a rate that almost certainly makes the channel unprofitable on LTV. Product Hunt users (19.4% of base) retain at 27.2%, suggesting intent matters more than volume. Immediate action: pause or reduce Google Ads spend and audit the landing page + onboarding flow for that segment to identify expectation mismatches. Consider running a post-signup survey specifically for Google Ads users.",
+      "metrics": {
+        "metric_value": "-22.2pp",
+        "metric_label": "D7 retention: Google Ads vs. Referral"
+      },
+      "tags": [
+        "acquisition",
+        "retention",
+        "churn_risk"
+      ],
+      "severity": "high",
+      "created_at": "2026-05-25T18:15:38.115032"
+    },
+    {
+      "id": "83e70304-dbef-46c8-8850-914ca0476822",
+      "source_id": "demo",
+      "type": "retention_pattern",
+      "category": "Retention",
+      "title": "Retention rises from D1 to D3 then collapses 80% by D30",
+      "description": "The retention curve shows an unusual pattern: D1 is 26.7%, D3 actually rises to 34.5% (+7.8pp), then falls sharply to D7 (24.7%), D14 (16.7%), and D30 (6.6%). The D1→D3 uptick suggests users need a day or two to grasp the product — onboarding may be too slow to deliver value on day one. But the collapse from D3 to D30 (a loss of 81% of those who returned at D3) indicates no sticky habit is forming. The DAU/MAU stickiness ratio of 4.4% confirms this — a healthy SaaS product typically sits at 15–20%+. Priority actions: (1) identify what users do between D1 and D3 that brings them back, and accelerate that moment to D1; (2) introduce re-engagement nudges between D7 and D14 where the steepest absolute loss occurs.",
+      "metrics": {
+        "metric_value": "4.4%",
+        "metric_label": "DAU/MAU stickiness ratio"
+      },
+      "tags": [
+        "retention",
+        "onboarding",
+        "churn_risk"
+      ],
+      "severity": "high",
+      "created_at": "2026-05-25T18:15:38.115032"
+    },
+    {
+      "id": "bbc52a48-3b21-437e-8f50-dd21c7c7c41d",
+      "source_id": "demo",
+      "type": "segment_difference",
+      "category": "Segmentation",
+      "title": "Android D7 retention is 14.4% — half that of Web users at 28.9%",
+      "description": "Platform retention diverges sharply: Web (2,463 users) retains at 28.9% at D7, iOS (1,554 users) at 24.1%, and Android (969 users) at just 14.4%. The Android deficit of 14.5pp vs. Web and 9.7pp vs. iOS points to a platform-specific experience problem rather than a general product issue. Android represents 19.4% of the user base — poor retention here is a material drag on overall numbers. Recommended next steps: audit Android-specific crash rates, load times, and UI flows; compare feature completion rates between Android and Web for the same activation steps (project_created, task_completed); and prioritize Android bug fixes or feature parity in the next sprint.",
+      "metrics": {
+        "metric_value": "-14.5pp",
+        "metric_label": "D7 retention: Android vs. Web"
+      },
+      "tags": [
+        "mobile",
+        "desktop",
+        "retention"
+      ],
+      "severity": "medium",
+      "created_at": "2026-05-25T18:15:38.115032"
+    },
+    {
+      "id": "713df40e-ea30-4bcb-8568-b91eff7b51fb",
+      "source_id": "demo",
+      "type": "engagement_pattern",
+      "category": "Engagement",
+      "title": "36% of users who create a task never complete one — a core loop gap",
+      "description": "The activation funnel shows 2,476 users created a task (49.9% of signups) but only 1,728 completed one (34.8%) — meaning 748 users, or roughly 30% of task creators, never closed the loop. Task creation and completion together account for 78.5% of all product events (45.9% + 32.6%), confirming this is the core product loop. Users who don't complete a task are likely to churn before converting, as subscription_started is only reached by 6.5% of signups. Action: introduce in-app prompts or email nudges for users who have created but not completed a task within 24–48 hours, and simplify the task completion UX to reduce any friction between the two events.",
+      "metrics": {
+        "metric_value": "30%",
+        "metric_label": "task creators who never complete a task"
+      },
+      "tags": [
+        "engagement",
+        "activation",
+        "power_users"
+      ],
+      "severity": "medium",
+      "created_at": "2026-05-25T18:15:38.115032"
+    }
+  ],
+  "qna": [
+    {
+      "question": "Why is retention low for Google Ads users?",
+      "answer_markdown": "Here's a clear picture of what's driving low retention for Google Ads users:\n\n---\n\n## 🔍 Why Google Ads Retention Is Low\n\n### The Core Problem: Massive Engagement Gap\nGoogle Ads users have **D7 retention of just 11.6%** — less than half the next-lowest channel (Product Hunt at 27.3%) and barely a third of Referral (34.3%). This isn't a small gap; it's a structural problem.\n\n---\n\n### Root Cause: Google Ads Users Are Not Activating\n\nThe data shows that the events most correlated with retention are **project_created** (1.23x lift), **task_created** (1.23x lift), and especially **team_invited** (1.41x lift). Google Ads users are doing these at significantly lower rates:\n\n| Event | Google Ads Users | Organic Users | Referral Users |\n|---|---|---|---|\n| `project_created` | 425 / 1,499 (**28%**) | 1,208 / 1,541 (**78%**) | 788 / 981 (**80%**) |\n| `team_invited` | 112 / 1,499 (**7.5%**) | 339 / 1,541 (**22%**) | 223 / 981 (**23%**) |\n\nGoogle Ads users are **~3× less likely** to create a project and **~3× less likely** to invite a teammate vs. Organic or Referral users.\n\n---\n\n### The Likely Explanation: Intent Mismatch\nGoogle Ads captures users with **low or unclear intent** — they clicked an ad but may not have a genuine need for the product. In contrast, Referral and Organic users arrive with high intent and a clear use case, making them far more likely to take meaningful activation steps.\n\n---\n\n### 💡 Recommended Follow-Up\n**Build an activation funnel** for Google Ads users: `signup → project_created → task_created → team_invited`. This will pinpoint exactly which step they drop off at first, so you can target onboarding interventions (e.g., a guided setup flow or a prompt to invite teammates) specifically for paid acquisition users.",
+      "tools_used": [
+        {
+          "name": "get_metric",
+          "inputs": {
+            "metric_name": "retention_d7",
+            "filters": {
+              "channel": "google_ads"
+            }
+          },
+          "output": "Error: No data after applying filters",
+          "duration_ms": 4
+        },
+        {
+          "name": "find_correlations",
+          "inputs": {
+            "target_metric": "retention_d7"
+          },
+          "output": "{\"target\": \"retention_d7\", \"baseline_pct\": 24.9, \"correlations\": [{\"event\": \"team_invited\", \"users_who_triggered\": 20, \"retention_pct\": 35.0, \"baseline_pct\": 24.9, \"lift\": 1.41}, {\"event\": \"task_created\", \"users_who_triggered\": 1677, \"retention_pct\": 30.5, \"baseline_pct\": 24.9, \"lift\": 1.23}, {\"event\": \"task_completed\", \"users_who_triggered\": 1011, \"retention_pct\": 30.6, \"baseline_pct\": 24.9, \"lift\": 1.23}, {\"event\": \"project_created\", \"users_who_triggered\": 2747, \"retention_pct\": 30.7, \"baseline_pct\": 24.9, \"lift\": 1.23}, {\"event\": \"integration_connected\", \"users_who_triggered\": 199, \"retenti…",
+          "duration_ms": 196
+        },
+        {
+          "name": "compare_segments",
+          "inputs": {
+            "metric": "retention_d7",
+            "segment_by": "channel"
+          },
+          "output": "{\"metric\": \"retention_d7\", \"segment_by\": \"channel\", \"segments\": [{\"label\": \"Referral\", \"value\": 34.3, \"users\": 981}, {\"label\": \"Organic\", \"value\": 30.3, \"users\": 1541}, {\"label\": \"Product Hunt\", \"value\": 27.3, \"users\": 965}, {\"label\": \"Google Ads\", \"value\": 11.6, \"users\": 1499}]}",
+          "duration_ms": 159
+        },
+        {
+          "name": "get_event_stats",
+          "inputs": {
+            "event_name": "project_created",
+            "group_by": "channel"
+          },
+          "output": "{\"event_name\": \"project_created\", \"total_count\": 3160, \"unique_users\": 3160, \"breakdown_by\": \"channel\", \"breakdown\": [{\"label\": \"Organic\", \"count\": 1208, \"unique_users\": 1208}, {\"label\": \"Referral\", \"count\": 788, \"unique_users\": 788}, {\"label\": \"Product Hunt\", \"count\": 739, \"unique_users\": 739}, {\"label\": \"Google Ads\", \"count\": 425, \"unique_users\": 425}]}",
+          "duration_ms": 7
+        },
+        {
+          "name": "get_event_stats",
+          "inputs": {
+            "event_name": "team_invited",
+            "group_by": "channel"
+          },
+          "output": "{\"event_name\": \"team_invited\", \"total_count\": 857, \"unique_users\": 857, \"breakdown_by\": \"channel\", \"breakdown\": [{\"label\": \"Organic\", \"count\": 339, \"unique_users\": 339}, {\"label\": \"Referral\", \"count\": 223, \"unique_users\": 223}, {\"label\": \"Product Hunt\", \"count\": 183, \"unique_users\": 183}, {\"label\": \"Google Ads\", \"count\": 112, \"unique_users\": 112}]}",
+          "duration_ms": 6
+        }
+      ],
+      "charts": [
+        {
+          "chart_type": "hbar",
+          "title": "Events correlated with retention_d7",
+          "subtitle": "Baseline retention_d7: 24.9% · lift = rate/baseline",
+          "data": [
+            {
+              "label": "team_invited",
+              "value": 1.41
+            },
+            {
+              "label": "task_created",
+              "value": 1.23
+            },
+            {
+              "label": "task_completed",
+              "value": 1.23
+            },
+            {
+              "label": "project_created",
+              "value": 1.23
+            },
+            {
+              "label": "integration_connected",
+              "value": 1.09
+            },
+            {
+              "label": "signup",
+              "value": 0.99
+            }
+          ],
+          "config": {
+            "accent_index": 0,
+            "format": "float",
+            "unit": "x lift"
+          }
+        },
+        {
+          "chart_type": "hbar",
+          "title": "retention d7 by channel",
+          "subtitle": "Top 4 segments",
+          "data": [
+            {
+              "label": "Referral",
+              "value": 34.3
+            },
+            {
+              "label": "Organic",
+              "value": 30.3
+            },
+            {
+              "label": "Product Hunt",
+              "value": 27.3
+            },
+            {
+              "label": "Google Ads",
+              "value": 11.6
+            }
+          ],
+          "config": {
+            "accent_index": 0,
+            "format": "pct",
+            "unit": "%"
+          }
+        },
+        {
+          "chart_type": "hbar",
+          "title": "'project_created' by channel",
+          "subtitle": "3,160 unique users total",
+          "data": [
+            {
+              "label": "Organic",
+              "value": 1208
+            },
+            {
+              "label": "Referral",
+              "value": 788
+            },
+            {
+              "label": "Product Hunt",
+              "value": 739
+            },
+            {
+              "label": "Google Ads",
+              "value": 425
+            }
+          ],
+          "config": {
+            "accent_index": 0,
+            "format": "int"
+          }
+        },
+        {
+          "chart_type": "hbar",
+          "title": "'team_invited' by channel",
+          "subtitle": "857 unique users total",
+          "data": [
+            {
+              "label": "Organic",
+              "value": 339
+            },
+            {
+              "label": "Referral",
+              "value": 223
+            },
+            {
+              "label": "Product Hunt",
+              "value": 183
+            },
+            {
+              "label": "Google Ads",
+              "value": 112
+            }
+          ],
+          "config": {
+            "accent_index": 0,
+            "format": "int"
+          }
+        }
+      ]
+    },
+    {
+      "question": "What predicts paid conversion?",
+      "answer_markdown": "Here's what the data reveals about paid conversion:\n\n---\n\n## 🔍 What Predicts Paid Conversion\n\n### Funnel Overview\nOverall signup-to-subscription conversion is very low at **0.5%** (24 out of 4,963 users). The biggest drop-off points are:\n\n| Step | Users | Conversion from Prev |\n|------|-------|----------------------|\n| Signup | 4,963 | — |\n| Project Created | 3,086 | 62.2% ✅ |\n| Integration Connected | 637 | **20.6% ⚠️ Big drop** |\n| Subscription Started | 24 | **3.8% 🚨 Critical drop** |\n\nThe **integration → subscription** step is the most severe bottleneck — only 1 in 26 users who connect an integration go on to subscribe.\n\n---\n\n### Behavioral Signals That Correlate with Long-Term Engagement (D30)\n\n| Behavior | Lift vs. Baseline | Users |\n|----------|------------------|-------|\n| **team_invited** | **1.52x** 🏆 | 20 |\n| **task_created** | 1.30x | 1,677 |\n| **project_created** | 1.26x | 2,747 |\n| **task_completed** | 1.18x | 1,011 |\n| integration_connected | ~1.0x | 199 |\n\n**Key takeaway:** Users who **invite teammates** in their first 1–2 days are 52% more likely to retain long-term — making this the strongest predictor of stickiness (and likely conversion). Core task workflows (creating + completing tasks) also show meaningful lift.\n\nNotably, `integration_connected` shows **no lift**, despite being a required funnel step — suggesting integrations alone don't signal intent to pay.\n\n---\n\n### 💡 Recommendations\n\n1. **Push team invites earlier** — this is your strongest behavioral signal. Add prompts in onboarding to invite a collaborator before they create their first project.\n2. **Investigate the integration → subscription gap** — users who connect an integration but don't subscribe may need a targeted nudge (e.g., a paywall trigger or a trial offer at that moment).\n\n**Suggested follow-up:** Run `compare_segments` on `plan` to see if paid users skew toward a specific channel or platform — that could surface where to acquire higher-intent users.",
+      "tools_used": [
+        {
+          "name": "find_correlations",
+          "inputs": {
+            "target_metric": "retention_d30",
+            "candidate_events": [
+              "task_created",
+              "task_completed",
+              "project_created",
+              "integration_connected",
+              "team_invited",
+              "export_data",
+              "subscription_started"
+            ]
+          },
+          "output": "{\"target\": \"retention_d30\", \"baseline_pct\": 6.6, \"correlations\": [{\"event\": \"team_invited\", \"users_who_triggered\": 20, \"retention_pct\": 10.0, \"baseline_pct\": 6.6, \"lift\": 1.52}, {\"event\": \"task_created\", \"users_who_triggered\": 1677, \"retention_pct\": 8.5, \"baseline_pct\": 6.6, \"lift\": 1.3}, {\"event\": \"project_created\", \"users_who_triggered\": 2747, \"retention_pct\": 8.3, \"baseline_pct\": 6.6, \"lift\": 1.26}, {\"event\": \"task_completed\", \"users_who_triggered\": 1011, \"retention_pct\": 7.7, \"baseline_pct\": 6.6, \"lift\": 1.18}, {\"event\": \"integration_connected\", \"users_who_triggered\": 199, \"retention_pct\":…",
+          "duration_ms": 160
+        },
+        {
+          "name": "build_funnel",
+          "inputs": {
+            "event_sequence": [
+              "signup",
+              "project_created",
+              "integration_connected",
+              "subscription_started"
+            ]
+          },
+          "output": "{\"steps\": [{\"event\": \"signup\", \"users\": 4963, \"pct_from_start\": 100.0, \"pct_from_prev\": 100.0}, {\"event\": \"project_created\", \"users\": 3086, \"pct_from_start\": 62.2, \"pct_from_prev\": 62.2}, {\"event\": \"integration_connected\", \"users\": 637, \"pct_from_start\": 12.8, \"pct_from_prev\": 20.6}, {\"event\": \"subscription_started\", \"users\": 24, \"pct_from_start\": 0.5, \"pct_from_prev\": 3.8}], \"overall_conversion_pct\": 0.5, \"time_window_days\": 7}",
+          "duration_ms": 19
+        }
+      ],
+      "charts": [
+        {
+          "chart_type": "hbar",
+          "title": "Events correlated with retention_d30",
+          "subtitle": "Baseline retention_d30: 6.6% · lift = rate/baseline",
+          "data": [
+            {
+              "label": "team_invited",
+              "value": 1.52
+            },
+            {
+              "label": "task_created",
+              "value": 1.3
+            },
+            {
+              "label": "project_created",
+              "value": 1.26
+            },
+            {
+              "label": "task_completed",
+              "value": 1.18
+            },
+            {
+              "label": "integration_connected",
+              "value": 1.0
+            }
+          ],
+          "config": {
+            "accent_index": 0,
+            "format": "float",
+            "unit": "x lift"
+          }
+        },
+        {
+          "chart_type": "hbar",
+          "title": "Funnel: signup → subscription_started",
+          "subtitle": "Overall conversion: 0.5%",
+          "data": [
+            {
+              "label": "signup",
+              "value": 100.0
+            },
+            {
+              "label": "project_created",
+              "value": 62.2
+            },
+            {
+              "label": "integration_connected",
+              "value": 12.8
+            },
+            {
+              "label": "subscription_started",
+              "value": 0.5
+            }
+          ],
+          "config": {
+            "accent_index": 0,
+            "format": "pct",
+            "unit": "%"
+          }
+        }
+      ]
+    },
+    {
+      "question": "Show me the signup funnel",
+      "answer_markdown": "Here's your signup funnel breakdown:\n\n| Step | Users | From Previous | From Start |\n|---|---|---|---|\n| Signup | 4,963 | — | 100% |\n| Project Created | 3,086 | 62.2% | 62.2% |\n| Task Created | 1,952 | 63.3% | 39.3% |\n| Task Completed | 1,682 | 86.2% | 33.9% |\n\n**Overall conversion from signup → task completed is 33.9%.** The biggest drop-off happens right at the top: **37.8% of users who sign up never create a project**, making that the most critical leak in the funnel.\n\nThe good news: once users create a task, they're very likely to complete it (86.2% do), suggesting the core workflow is sticky.\n\n**Suggested follow-up:** Investigate what differentiates users who create a project vs. those who don't — for example, compare by `channel` or `plan` to see if certain acquisition sources or plan types have much higher activation rates. This could inform onboarding improvements targeting that first drop-off.",
+      "tools_used": [
+        {
+          "name": "build_funnel",
+          "inputs": {
+            "event_sequence": [
+              "signup",
+              "project_created",
+              "task_created",
+              "task_completed"
+            ]
+          },
+          "output": "{\"steps\": [{\"event\": \"signup\", \"users\": 4963, \"pct_from_start\": 100.0, \"pct_from_prev\": 100.0}, {\"event\": \"project_created\", \"users\": 3086, \"pct_from_start\": 62.2, \"pct_from_prev\": 62.2}, {\"event\": \"task_created\", \"users\": 1952, \"pct_from_start\": 39.3, \"pct_from_prev\": 63.3}, {\"event\": \"task_completed\", \"users\": 1682, \"pct_from_start\": 33.9, \"pct_from_prev\": 86.2}], \"overall_conversion_pct\": 33.9, \"time_window_days\": 7}",
+          "duration_ms": 22
+        }
+      ],
+      "charts": [
+        {
+          "chart_type": "hbar",
+          "title": "Funnel: signup → task_completed",
+          "subtitle": "Overall conversion: 33.9%",
+          "data": [
+            {
+              "label": "signup",
+              "value": 100.0
+            },
+            {
+              "label": "project_created",
+              "value": 62.2
+            },
+            {
+              "label": "task_created",
+              "value": 39.3
+            },
+            {
+              "label": "task_completed",
+              "value": 33.9
+            }
+          ],
+          "config": {
+            "accent_index": 0,
+            "format": "pct",
+            "unit": "%"
+          }
+        }
+      ]
+    },
+    {
+      "question": "Compare retention by platform",
+      "answer_markdown": "Here's a breakdown of retention across platforms:\n\n### D7 Retention\n| Platform | D7 Retention | Users |\n|----------|-------------|-------|\n| 🥇 Web | 29.2% | 2,463 |\n| 🥈 iOS | 24.4% | 1,554 |\n| 🥉 Android | 14.7% | 969 |\n\n### D30 Retention\n| Platform | D30 Retention | Users |\n|----------|--------------|-------|\n| 🥇 Web | 7.1% | 2,463 |\n| 🥈 iOS | 6.9% | 1,554 |\n| 🥉 Android | 4.4% | 969 |\n\n**Key Takeaways:**\n- **Web leads across the board**, with the strongest D7 (29.2%) and D30 (7.1%) retention.\n- **iOS is competitive with Web at D30** (6.9% vs 7.1%), but falls further behind at D7.\n- **Android is a clear laggard** — its D7 retention (14.7%) is nearly **half** that of Web, and its D30 (4.4%) is ~38% lower. This is a significant gap worth investigating.\n\n**Suggested follow-up:** Dig into what's happening with Android users early in their journey — run a funnel analysis (e.g., `signup → task_created → task_completed`) filtered to Android to see if there's a specific drop-off point driving the lower retention.",
+      "tools_used": [
+        {
+          "name": "compare_segments",
+          "inputs": {
+            "metric": "retention_d7",
+            "segment_by": "platform"
+          },
+          "output": "{\"metric\": \"retention_d7\", \"segment_by\": \"platform\", \"segments\": [{\"label\": \"Web\", \"value\": 29.2, \"users\": 2463}, {\"label\": \"iOS\", \"value\": 24.4, \"users\": 1554}, {\"label\": \"Android\", \"value\": 14.7, \"users\": 969}]}",
+          "duration_ms": 176
+        },
+        {
+          "name": "compare_segments",
+          "inputs": {
+            "metric": "retention_d30",
+            "segment_by": "platform"
+          },
+          "output": "{\"metric\": \"retention_d30\", \"segment_by\": \"platform\", \"segments\": [{\"label\": \"Web\", \"value\": 7.1, \"users\": 2463}, {\"label\": \"iOS\", \"value\": 6.9, \"users\": 1554}, {\"label\": \"Android\", \"value\": 4.4, \"users\": 969}]}",
+          "duration_ms": 142
+        }
+      ],
+      "charts": [
+        {
+          "chart_type": "hbar",
+          "title": "retention d7 by platform",
+          "subtitle": "Top 3 segments",
+          "data": [
+            {
+              "label": "Web",
+              "value": 29.2
+            },
+            {
+              "label": "iOS",
+              "value": 24.4
+            },
+            {
+              "label": "Android",
+              "value": 14.7
+            }
+          ],
+          "config": {
+            "accent_index": 0,
+            "format": "pct",
+            "unit": "%"
+          }
+        },
+        {
+          "chart_type": "hbar",
+          "title": "retention d30 by platform",
+          "subtitle": "Top 3 segments",
+          "data": [
+            {
+              "label": "Web",
+              "value": 7.1
+            },
+            {
+              "label": "iOS",
+              "value": 6.9
+            },
+            {
+              "label": "Android",
+              "value": 4.4
+            }
+          ],
+          "config": {
+            "accent_index": 0,
+            "format": "pct",
+            "unit": "%"
+          }
+        }
+      ]
+    },
+    {
+      "question": "What do power users have in common?",
+      "answer_markdown": "Here's what power users consistently have in common across both short-term (D7) and long-term (D30) retention:\n\n---\n\n### 🏆 Power User Signature Behaviors\n\n| Early Action | D7 Retention Lift | D30 Retention Lift |\n|---|---|---|\n| **Invite a teammate** | +41% (35% vs 24.9%) | +52% (10% vs 6.6%) |\n| **Create a task** | +23% (30.5% vs 24.9%) | +30% (8.5% vs 6.6%) |\n| **Complete a task** | +23% (30.6% vs 24.9%) | +18% (7.7% vs 6.6%) |\n| **Create a project** | +23% (30.7% vs 24.9%) | +26% (8.3% vs 6.6%) |\n\n---\n\n### Key Takeaways\n\n1. **Inviting teammates is the #1 predictor of power user behavior** — users who invite a teammate in their first 1-2 days are **52% more likely to still be around at Day 30**. This is a classic \"collaborative lock-in\" signal.\n\n2. **Core task loop matters early** — Creating *and* completing tasks signals that users are getting real value from the product, not just exploring. Both correlate strongly with retention.\n\n3. **Project creation is a strong signal** — Nearly all active users create a project (2,747 out of ~2,914 MAU), but doing so early still lifts retention by ~25%.\n\n4. **Connecting integrations has no real lift** — Despite seeming like a power feature, `integration_connected` shows near-zero lift on D30 retention. It may attract curious users who don't stick around.\n\n---\n\n### 💡 Recommended Follow-up\n\nSince **team invitations** show the strongest lift but have very low adoption (only 20 users triggered it), there's a **massive untapped opportunity**. I'd suggest investigating: *At what point in the flow do users have the option to invite teammates, and can you push that moment earlier or make it more prominent during onboarding?*",
+      "tools_used": [
+        {
+          "name": "find_correlations",
+          "inputs": {
+            "target_metric": "retention_d7"
+          },
+          "output": "{\"target\": \"retention_d7\", \"baseline_pct\": 24.9, \"correlations\": [{\"event\": \"team_invited\", \"users_who_triggered\": 20, \"retention_pct\": 35.0, \"baseline_pct\": 24.9, \"lift\": 1.41}, {\"event\": \"task_created\", \"users_who_triggered\": 1677, \"retention_pct\": 30.5, \"baseline_pct\": 24.9, \"lift\": 1.23}, {\"event\": \"task_completed\", \"users_who_triggered\": 1011, \"retention_pct\": 30.6, \"baseline_pct\": 24.9, \"lift\": 1.23}, {\"event\": \"project_created\", \"users_who_triggered\": 2747, \"retention_pct\": 30.7, \"baseline_pct\": 24.9, \"lift\": 1.23}, {\"event\": \"integration_connected\", \"users_who_triggered\": 199, \"retenti…",
+          "duration_ms": 170
+        },
+        {
+          "name": "find_correlations",
+          "inputs": {
+            "target_metric": "retention_d30"
+          },
+          "output": "{\"target\": \"retention_d30\", \"baseline_pct\": 6.6, \"correlations\": [{\"event\": \"team_invited\", \"users_who_triggered\": 20, \"retention_pct\": 10.0, \"baseline_pct\": 6.6, \"lift\": 1.52}, {\"event\": \"task_created\", \"users_who_triggered\": 1677, \"retention_pct\": 8.5, \"baseline_pct\": 6.6, \"lift\": 1.3}, {\"event\": \"project_created\", \"users_who_triggered\": 2747, \"retention_pct\": 8.3, \"baseline_pct\": 6.6, \"lift\": 1.26}, {\"event\": \"task_completed\", \"users_who_triggered\": 1011, \"retention_pct\": 7.7, \"baseline_pct\": 6.6, \"lift\": 1.18}, {\"event\": \"signup\", \"users_who_triggered\": 4963, \"retention_pct\": 6.6, \"baselin…",
+          "duration_ms": 161
+        }
+      ],
+      "charts": [
+        {
+          "chart_type": "hbar",
+          "title": "Events correlated with retention_d7",
+          "subtitle": "Baseline retention_d7: 24.9% · lift = rate/baseline",
+          "data": [
+            {
+              "label": "team_invited",
+              "value": 1.41
+            },
+            {
+              "label": "task_created",
+              "value": 1.23
+            },
+            {
+              "label": "task_completed",
+              "value": 1.23
+            },
+            {
+              "label": "project_created",
+              "value": 1.23
+            },
+            {
+              "label": "integration_connected",
+              "value": 1.09
+            },
+            {
+              "label": "signup",
+              "value": 0.99
+            }
+          ],
+          "config": {
+            "accent_index": 0,
+            "format": "float",
+            "unit": "x lift"
+          }
+        },
+        {
+          "chart_type": "hbar",
+          "title": "Events correlated with retention_d30",
+          "subtitle": "Baseline retention_d30: 6.6% · lift = rate/baseline",
+          "data": [
+            {
+              "label": "team_invited",
+              "value": 1.52
+            },
+            {
+              "label": "task_created",
+              "value": 1.3
+            },
+            {
+              "label": "project_created",
+              "value": 1.26
+            },
+            {
+              "label": "task_completed",
+              "value": 1.18
+            },
+            {
+              "label": "signup",
+              "value": 1.0
+            },
+            {
+              "label": "integration_connected",
+              "value": 1.0
+            }
+          ],
+          "config": {
+            "accent_index": 0,
+            "format": "float",
+            "unit": "x lift"
+          }
+        }
+      ]
+    },
+    {
+      "question": "Did anything unusual happen with daily active users?",
+      "answer_markdown": "⚠️ Yes — there's a significant drop in DAU that warrants attention.\n\n**DAU is down ~50% week-over-week**: the last 7 days averaged **188 users/day**, compared to **373 users/day** the prior week. That's a **-49.5% decline**, which is a major and unusual swing.\n\nFor context, the 30-day average DAU is **128 users/day**, which suggests the previous week (373/day) may have been an unusually *high* spike, and things are now normalizing — or the recent week represents an accelerating decline.\n\n**Suggested follow-up:** Break this down by platform or acquisition channel to see if the drop is isolated to a specific segment (e.g., one channel going dark or a platform-specific issue). I can also check if signup volume dropped in tandem, which would point to a top-of-funnel problem.",
+      "tools_used": [
+        {
+          "name": "get_metric",
+          "inputs": {
+            "metric_name": "dau",
+            "time_range": "last_30_days"
+          },
+          "output": "{\"metric\": \"dau\", \"value\": 128, \"time_range\": \"last_30_days\", \"unit\": \"users/day\"}",
+          "duration_ms": 8
+        },
+        {
+          "name": "compare_periods",
+          "inputs": {
+            "metric": "dau",
+            "period_a": "last_7_days",
+            "period_b": "previous_7_days"
+          },
+          "output": "{\"metric\": \"dau\", \"period_a\": {\"label\": \"last 7 days\", \"value\": 188.25}, \"period_b\": {\"label\": \"previous 7 days\", \"value\": 372.88}, \"pct_change\": -49.5, \"direction\": \"down\"}",
+          "duration_ms": 6
+        }
+      ],
+      "charts": [
+        {
+          "chart_type": "line",
+          "title": "Daily active users",
+          "subtitle": "last 30 days",
+          "data": [
+            {
+              "x": "2024-03-30 00:00:00+00:00",
+              "value": 4
+            },
+            {
+              "x": "2024-03-31 00:00:00+00:00",
+              "value": 456
+            },
+            {
+              "x": "2024-04-01 00:00:00+00:00",
+              "value": 487
+            },
+            {
+              "x": "2024-04-02 00:00:00+00:00",
+              "value": 481
+            },
+            {
+              "x": "2024-04-03 00:00:00+00:00",
+              "value": 465
+            },
+            {
+              "x": "2024-04-04 00:00:00+00:00",
+              "value": 390
+            },
+            {
+              "x": "2024-04-05 00:00:00+00:00",
+              "value": 492
+            },
+            {
+              "x": "2024-04-06 00:00:00+00:00",
+              "value": 477
+            },
+            {
+              "x": "2024-04-07 00:00:00+00:00",
+              "value": 441
+            },
+            {
+              "x": "2024-04-08 00:00:00+00:00",
+              "value": 499
+            },
+            {
+              "x": "2024-04-09 00:00:00+00:00",
+              "value": 459
+            },
+            {
+              "x": "2024-04-10 00:00:00+00:00",
+              "value": 473
+            },
+            {
+              "x": "2024-04-11 00:00:00+00:00",
+              "value": 468
+            },
+            {
+              "x": "2024-04-12 00:00:00+00:00",
+              "value": 476
+            },
+            {
+              "x": "2024-04-13 00:00:00+00:00",
+              "value": 486
+            },
+            {
+              "x": "2024-04-14 00:00:00+00:00",
+              "value": 507
+            },
+            {
+              "x": "2024-04-15 00:00:00+00:00",
+              "value": 450
+            },
+            {
+              "x": "2024-04-16 00:00:00+00:00",
+              "value": 453
+            },
+            {
+              "x": "2024-04-17 00:00:00+00:00",
+              "value": 472
+            },
+            {
+              "x": "2024-04-18 00:00:00+00:00",
+              "value": 484
+            },
+            {
+              "x": "2024-04-19 00:00:00+00:00",
+              "value": 489
+            },
+            {
+              "x": "2024-04-20 00:00:00+00:00",
+              "value": 396
+            },
+            {
+              "x": "2024-04-21 00:00:00+00:00",
+              "value": 353
+            },
+            {
+              "x": "2024-04-22 00:00:00+00:00",
+              "value": 333
+            },
+            {
+              "x": "2024-04-23 00:00:00+00:00",
+              "value": 317
+            },
+            {
+              "x": "2024-04-24 00:00:00+00:00",
+              "value": 274
+            },
+            {
+              "x": "2024-04-25 00:00:00+00:00",
+              "value": 237
+            },
+            {
+              "x": "2024-04-26 00:00:00+00:00",
+              "value": 212
+            },
+            {
+              "x": "2024-04-27 00:00:00+00:00",
+              "value": 179
+            },
+            {
+              "x": "2024-04-28 00:00:00+00:00",
+              "value": 155
+            },
+            {
+              "x": "2024-04-29 00:00:00+00:00",
+              "value": 128
+            }
+          ],
+          "config": {
+            "x_key": "x",
+            "y_key": "value",
+            "format": "int"
+          }
+        },
+        {
+          "chart_type": "hbar",
+          "title": "dau comparison",
+          "subtitle": "-49.5% change",
+          "data": [
+            {
+              "label": "last 7 days",
+              "value": 188.25
+            },
+            {
+              "label": "previous 7 days",
+              "value": 372.88
+            }
+          ],
+          "config": {
+            "accent_index": 0,
+            "format": "float"
+          }
+        }
+      ]
+    }
+  ]
+}

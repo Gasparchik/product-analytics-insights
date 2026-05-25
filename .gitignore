@@ -9,3 +9,5 @@ dist/
 .DS_Store
 *.log
 vite_*.txt
+*_log*.txt
+demo_mod.md

@@ -26,6 +26,7 @@ export interface Source {
   id: string
   type: string
   name: string
+  is_demo?: boolean
   created_at: string
   metadata: {
     columns?: string[]

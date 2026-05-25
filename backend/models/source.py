@@ -15,6 +15,7 @@ class Source(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     type: str  # "product_events" | "user_feedback" | "stakeholder_requests"
     name: str
+    is_demo: bool = False
     created_at: datetime = Field(default_factory=datetime.utcnow)
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
