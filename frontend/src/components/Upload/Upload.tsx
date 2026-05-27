@@ -110,7 +110,7 @@ export default function Upload() {
         // Keep only the most recent demo entry to avoid duplicates
         let demoSeen = false
         const deduped = sorted.filter(src => {
-          if (src.metadata?.is_demo) {
+          if (src.is_demo) {
             if (demoSeen) return false
             demoSeen = true
           }
@@ -308,7 +308,7 @@ export default function Upload() {
               {dragging ? 'Drop to upload' : 'Drop a CSV here, or click to pick a file'}
             </div>
             <div className="text-[13px] text-fg-muted">
-              Up to 500 MB. Nothing leaves your machine while we process.
+              Up to 100 MB. Nothing leaves your machine while we process.
             </div>
             <div className="mt-[10px] flex items-center justify-center gap-[6px] flex-wrap">
               <span className="text-[11px] text-fg-subtle">Needs columns:</span>
@@ -390,7 +390,7 @@ export default function Upload() {
           <div className="flex flex-col gap-[6px]">
             {recentSources.map(src => {
               const rows = src.metadata?.total_rows as number | undefined
-              const isDemoDataset = src.metadata?.is_demo === true
+              const isDemoDataset = src.is_demo === true
               return (
                 <button
                   key={src.id}

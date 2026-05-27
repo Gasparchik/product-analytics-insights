@@ -204,7 +204,7 @@ def build_summary_for_llm(analysis_run: dict[str, Any], source: dict[str, Any]) 
                     }
         summary["funnel"] = {
             "steps": [
-                {"event": s.get("event"), "users": s.get("users"), "conversion_pct": round(s.get("pct", 0) * 100, 1)}
+                {"event": s.get("event"), "users": s.get("users"), "conversion_pct": round(s.get("pct_of_first", 0) * 100, 1)}
                 for s in steps
             ],
             "overall_conversion_pct": round(fun.get("overall_conversion", 0) * 100, 1),
