@@ -2,6 +2,8 @@ node_modules/
 __pycache__/
 *.pyc
 .env
+.env.local
+*.local
 backend/data/*
 !backend/data/.gitkeep
 *.egg-info/
