@@ -35,6 +35,26 @@ def _auto_mapping(detected_format: str) -> dict:
     return {}
 
 
+def _empty_string_mask(series: pd.Series) -> pd.Series:
+    return series.isna() | (series.astype(str).str.strip() == "")
+
+
+def _parse_timestamp(series: pd.Series) -> pd.Series:
+    parsed = pd.to_datetime(series, errors="coerce", utc=True)
+    if parsed.isna().mean() > 0.5:
+        numeric = pd.to_numeric(series, errors="coerce")
+        parsed = pd.to_datetime(numeric, unit="ms", utc=True, errors="coerce")
+    return parsed
+
+
+def _ratio(part: int, total: int) -> float:
+    return round(part / total, 4) if total else 0.0
+
+
+def _issue(severity: str, title: str, detail: str) -> dict:
+    return {"severity": severity, "title": title, "detail": detail}
+
+
 @router.post("/upload")
 async def upload_csv(file: UploadFile = File(...)):
     if not file.filename or not file.filename.endswith(".csv"):
@@ -126,6 +146,183 @@ async def get_event_counts(source_id: str, col: str = Query(..., description="Co
         "col": col,
         "total_rows": int(len(df)),
         "counts": [{"name": name, "count": int(cnt)} for name, cnt in top.items()],
+    }
+
+
+@router.post("/{source_id}/quality")
+async def get_data_quality(source_id: str, mapping: ColumnMapping):
+    record = storage.get(source_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Source not found")
+
+    csv_path = DATA_DIR / f"{source_id}.csv"
+    if not csv_path.exists():
+        raise HTTPException(status_code=404, detail="CSV file not found")
+
+    try:
+        header = pd.read_csv(csv_path, nrows=0)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Could not parse CSV header: {e}")
+
+    columns = set(header.columns.tolist())
+    required_map = mapping.model_dump()
+    required_fields = ["user_id", "timestamp", "event_name"]
+    missing = [
+        {"field": field, "column": required_map.get(field)}
+        for field in required_fields
+        if not required_map.get(field) or required_map.get(field) not in columns
+    ]
+    if missing:
+        return {
+            "status": "blocked",
+            "score": 0,
+            "total_rows": 0,
+            "date_range": {"start": None, "end": None, "days": 0},
+            "metrics": {},
+            "top_events": [],
+            "properties": [],
+            "issues": [
+                _issue(
+                    "error",
+                    "Required mapping is incomplete",
+                    "Pick existing CSV columns for user id, timestamp, and event name.",
+                )
+            ],
+            "missing_required": missing,
+        }
+
+    property_cols = [
+        p.strip()
+        for p in (mapping.properties or "").split(",")
+        if p.strip() and p.strip() in columns
+    ]
+    selected_cols = list(dict.fromkeys([required_map[f] for f in required_fields] + property_cols))
+
+    try:
+        df = pd.read_csv(csv_path, usecols=selected_cols)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Could not read mapped columns: {e}")
+
+    total_rows = int(len(df))
+    user_col = mapping.user_id
+    ts_col = mapping.timestamp
+    event_col = mapping.event_name
+
+    user_empty = _empty_string_mask(df[user_col])
+    event_empty = _empty_string_mask(df[event_col])
+    parsed_ts = _parse_timestamp(df[ts_col])
+    ts_invalid = parsed_ts.isna()
+
+    valid_users = df.loc[~user_empty, user_col].astype(str).str.strip()
+    valid_events = df.loc[~event_empty, event_col].astype(str).str.strip()
+    valid_ts = parsed_ts.dropna()
+
+    unique_users = int(valid_users.nunique())
+    unique_events = int(valid_events.nunique())
+    top_events = [
+        {"name": str(name), "count": int(count)}
+        for name, count in valid_events.value_counts().head(8).items()
+    ]
+
+    if not valid_ts.empty:
+        start_ts = valid_ts.min()
+        end_ts = valid_ts.max()
+        date_range = {
+            "start": start_ts.date().isoformat(),
+            "end": end_ts.date().isoformat(),
+            "days": int((end_ts.date() - start_ts.date()).days) + 1,
+        }
+    else:
+        date_range = {"start": None, "end": None, "days": 0}
+
+    properties = []
+    for col in property_cols:
+        empty = _empty_string_mask(df[col])
+        filled = df.loc[~empty, col].astype(str).str.strip()
+        unique_count = int(filled.nunique())
+        fill_rate = _ratio(int(len(filled)), total_rows)
+        unique_ratio = _ratio(unique_count, int(len(filled)))
+        flags = []
+        if fill_rate < 0.2:
+            flags.append("low_fill")
+        if unique_count >= 20 and unique_ratio > 0.8:
+            flags.append("high_cardinality")
+        properties.append({
+            "column": col,
+            "fill_rate": fill_rate,
+            "unique_count": unique_count,
+            "unique_ratio": unique_ratio,
+            "top_values": [
+                {"value": str(name), "count": int(count)}
+                for name, count in filled.value_counts().head(5).items()
+            ],
+            "flags": flags,
+        })
+
+    issues: list[dict] = []
+    user_empty_ratio = _ratio(int(user_empty.sum()), total_rows)
+    event_empty_ratio = _ratio(int(event_empty.sum()), total_rows)
+    ts_invalid_ratio = _ratio(int(ts_invalid.sum()), total_rows)
+
+    if total_rows == 0:
+        issues.append(_issue("error", "CSV has no data rows", "Upload a file with at least one event row."))
+    if unique_users == 0:
+        issues.append(_issue("error", "No valid users found", "The selected user id column is empty."))
+    if unique_events == 0:
+        issues.append(_issue("error", "No valid events found", "The selected event name column is empty."))
+    if valid_ts.empty:
+        issues.append(_issue("error", "No valid timestamps found", "The selected timestamp column could not be parsed."))
+
+    if user_empty_ratio > 0:
+        sev = "error" if user_empty_ratio > 0.25 else "warning"
+        issues.append(_issue(sev, "Some rows have no user id", f"{user_empty_ratio:.1%} of rows will not work for user-level metrics."))
+    if event_empty_ratio > 0:
+        sev = "error" if event_empty_ratio > 0.25 else "warning"
+        issues.append(_issue(sev, "Some rows have no event name", f"{event_empty_ratio:.1%} of rows cannot be counted by event."))
+    if ts_invalid_ratio > 0:
+        sev = "error" if ts_invalid_ratio > 0.25 else "warning"
+        issues.append(_issue(sev, "Some timestamps are invalid", f"{ts_invalid_ratio:.1%} of rows cannot be placed on a timeline."))
+    if unique_events > 200:
+        issues.append(_issue("warning", "High event cardinality", f"{unique_events:,} unique event names found. This may include dynamic values or IDs."))
+    for prop in properties:
+        if "low_fill" in prop["flags"]:
+            issues.append(_issue("warning", f"{prop['column']} is mostly empty", f"{prop['fill_rate']:.0%} of rows have a value for this property."))
+        if "high_cardinality" in prop["flags"]:
+            issues.append(_issue("warning", f"{prop['column']} looks high-cardinality", f"{prop['unique_count']:,} unique values may make segmentation noisy."))
+
+    score = 100
+    score -= min(35, round(ts_invalid_ratio * 100))
+    score -= min(25, round(user_empty_ratio * 100))
+    score -= min(20, round(event_empty_ratio * 100))
+    score -= 8 * sum(1 for p in properties if p["flags"])
+    score = max(0, int(score))
+
+    if any(i["severity"] == "error" for i in issues):
+        status = "blocked"
+    elif any(i["severity"] == "warning" for i in issues):
+        status = "warning"
+    else:
+        status = "ready"
+
+    return {
+        "status": status,
+        "score": score,
+        "total_rows": total_rows,
+        "date_range": date_range,
+        "metrics": {
+            "unique_users": unique_users,
+            "unique_events": unique_events,
+            "empty_user_id_rows": int(user_empty.sum()),
+            "empty_user_id_ratio": user_empty_ratio,
+            "empty_event_name_rows": int(event_empty.sum()),
+            "empty_event_name_ratio": event_empty_ratio,
+            "invalid_timestamp_rows": int(ts_invalid.sum()),
+            "invalid_timestamp_ratio": ts_invalid_ratio,
+        },
+        "top_events": top_events,
+        "properties": properties,
+        "issues": issues,
+        "missing_required": [],
     }
 
 
