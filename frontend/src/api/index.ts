@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { Source, SourcePreview, ColumnMapping, Question, PropertyFilter } from '../types'
+import type { Source, SourcePreview, ColumnMapping, Question, PropertyFilter, DataQualityReport } from '../types'
 
 const http = axios.create({ baseURL: '/api' })
 
@@ -28,6 +28,8 @@ export const api = {
       http.get<{ col: string; total_rows: number; counts: { name: string; count: number }[] }>(
         `/sources/${id}/event_counts`, { params: { col } }
       ),
+    getQuality: (id: string, mapping: ColumnMapping) =>
+      http.post<DataQualityReport>(`/sources/${id}/quality`, mapping),
     saveMapping: (id: string, mapping: ColumnMapping, profile = 'event_log') =>
       http.post(`/sources/${id}/mapping`, mapping, { params: { profile } }),
   },

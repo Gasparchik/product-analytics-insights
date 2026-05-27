@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { api } from '../../api'
 import { useAnalysisStore } from '../../store/analysisStore'
 import { useSourceStore } from '../../store/sourceStore'
-import type { ColumnMapping } from '../../types'
+import type { ColumnMapping, DataQualityReport } from '../../types'
 import { Button, Field, Select, DataTable, InfoTip } from '../../ui'
 
 function BackIcon() {
@@ -475,6 +475,151 @@ function TemplatesPanel({
   )
 }
 
+function fmtPct(v?: number): string {
+  if (v == null) return '0%'
+  return `${Math.round(v * 100)}%`
+}
+
+function DataReadinessPanel({
+  report, loading, error, hasRequired,
+}: {
+  report: DataQualityReport | null
+  loading: boolean
+  error: string | null
+  hasRequired: boolean
+}) {
+  const [showAllProperties, setShowAllProperties] = useState(false)
+  const status = report?.status
+  const tone = status === 'blocked' ? 'var(--danger)' : status === 'warning' ? 'var(--warning)' : 'var(--accent)'
+  const label = status === 'blocked' ? 'Needs attention' : status === 'warning' ? 'Usable with warnings' : 'Ready to analyze'
+  const metrics = report?.metrics ?? {}
+  const visibleProperties = report ? (showAllProperties ? report.properties : report.properties.slice(0, 3)) : []
+
+  return (
+    <div className="border-t border-border pt-[14px] flex flex-col gap-[10px]">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-[12px] font-medium text-fg">Data readiness</div>
+          <div className="text-[11px] text-fg-subtle mt-[2px]">Full-file checks before analysis.</div>
+        </div>
+        {report && (
+          <span
+            className="text-[11px] font-medium px-[7px] py-[3px] rounded-sm"
+            style={{ color: tone, background: 'var(--surface-2)', border: `1px solid ${tone}` }}
+          >
+            {report.score}/100
+          </span>
+        )}
+      </div>
+
+      {!hasRequired ? (
+        <div className="text-[12px] text-fg-subtle bg-surface-2 border border-border rounded-md px-3 py-[9px]">
+          Select user id, timestamp, and event name to run checks.
+        </div>
+      ) : loading ? (
+        <div className="flex items-center gap-2 text-[12px] text-fg-muted bg-surface-2 border border-border rounded-md px-3 py-[9px]">
+          <SpinnerIcon />
+          Checking mapped columns...
+        </div>
+      ) : error ? (
+        <div className="text-[12px] text-danger bg-surface-2 border border-border rounded-md px-3 py-[9px]">
+          {error}
+        </div>
+      ) : report ? (
+        <>
+          <div className="flex items-center gap-2 text-[12px]" style={{ color: tone }}>
+            {status === 'ready' ? <CheckIcon /> : <WarnIcon />}
+            <span className="font-medium">{label}</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-[6px]">
+            <div className="bg-surface-2 border border-border rounded-md px-3 py-[8px]">
+              <div className="text-[10px] text-fg-subtle uppercase tracking-wide">Rows</div>
+              <div className="text-[13px] font-medium text-fg tabular-nums mt-[2px]">{report.total_rows.toLocaleString()}</div>
+            </div>
+            <div className="bg-surface-2 border border-border rounded-md px-3 py-[8px]">
+              <div className="text-[10px] text-fg-subtle uppercase tracking-wide">Users</div>
+              <div className="text-[13px] font-medium text-fg tabular-nums mt-[2px]">{(metrics.unique_users ?? 0).toLocaleString()}</div>
+            </div>
+            <div className="bg-surface-2 border border-border rounded-md px-3 py-[8px]">
+              <div className="text-[10px] text-fg-subtle uppercase tracking-wide">Events</div>
+              <div className="text-[13px] font-medium text-fg tabular-nums mt-[2px]">{(metrics.unique_events ?? 0).toLocaleString()}</div>
+            </div>
+            <div className="bg-surface-2 border border-border rounded-md px-3 py-[8px]">
+              <div className="text-[10px] text-fg-subtle uppercase tracking-wide">Period</div>
+              <div className="text-[13px] font-medium text-fg tabular-nums mt-[2px]">{report.date_range.days || 0}d</div>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-[5px] text-[11px] text-fg-muted">
+            <div className="flex justify-between gap-3">
+              <span>Invalid timestamps</span>
+              <span className="tabular-nums">{fmtPct(metrics.invalid_timestamp_ratio)}</span>
+            </div>
+            <div className="flex justify-between gap-3">
+              <span>Empty user ids</span>
+              <span className="tabular-nums">{fmtPct(metrics.empty_user_id_ratio)}</span>
+            </div>
+            <div className="flex justify-between gap-3">
+              <span>Empty event names</span>
+              <span className="tabular-nums">{fmtPct(metrics.empty_event_name_ratio)}</span>
+            </div>
+          </div>
+
+          {report.issues.length > 0 && (
+            <div className="flex flex-col gap-[6px]">
+              {report.issues.slice(0, 4).map((issue, i) => (
+                <div key={i} className="flex gap-[7px] text-[11px] leading-[1.35]">
+                  <span style={{ color: issue.severity === 'error' ? 'var(--danger)' : 'var(--warning)' }} className="mt-[1px]">
+                    <WarnIcon />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="font-medium text-fg">{issue.title}</div>
+                    <div className="text-fg-subtle">{issue.detail}</div>
+                  </div>
+                </div>
+              ))}
+              {report.issues.length > 4 && (
+                <div className="text-[11px] text-fg-subtle">+{report.issues.length - 4} more checks</div>
+              )}
+            </div>
+          )}
+
+          {report.properties.length > 0 && (
+            <div className="border-t border-border pt-[8px] flex flex-col gap-[5px]">
+              <div className="text-[11px] font-medium text-fg-muted">Properties</div>
+              {visibleProperties.map(prop => (
+                <div key={prop.column} className="flex items-center justify-between gap-2 text-[11px]">
+                  <span className="font-mono text-fg-muted truncate">{prop.column}</span>
+                  <span className="text-fg-subtle shrink-0">{fmtPct(prop.fill_rate)} filled · {prop.unique_count.toLocaleString()} values</span>
+                </div>
+              ))}
+              {report.properties.length > 3 && !showAllProperties && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllProperties(true)}
+                  className="text-[11px] text-fg-subtle hover:text-fg cursor-pointer text-left bg-transparent border-0 p-0 transition-colors"
+                >
+                  +{report.properties.length - 3} more
+                </button>
+              )}
+              {showAllProperties && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllProperties(false)}
+                  className="text-[11px] text-accent hover:opacity-80 cursor-pointer text-left bg-transparent border-0 p-0 transition-opacity"
+                >
+                  Show less
+                </button>
+              )}
+            </div>
+          )}
+        </>
+      ) : null}
+    </div>
+  )
+}
+
 export default function Mapping() {
   const { source_id } = useParams<{ source_id: string }>()
   const navigate = useNavigate()
@@ -607,6 +752,10 @@ export default function Mapping() {
   })
   const [eventCounts, setEventCounts] = useState<{ name: string; count: number }[]>([])
   const [eventCountsLoading, setEventCountsLoading] = useState(false)
+  const [quality, setQuality] = useState<DataQualityReport | null>(null)
+  const [qualityLoading, setQualityLoading] = useState(false)
+  const [qualityError, setQualityError] = useState<string | null>(null)
+  const hasRequiredMapping = !!mapping.user_id && !!mapping.timestamp && !!mapping.event_name
 
   // Fetch full-dataset event counts whenever the chosen column changes
   useEffect(() => {
@@ -622,6 +771,31 @@ export default function Mapping() {
     }, 300)
     return () => { cancelled = true; clearTimeout(timer) }
   }, [source_id, mapping.event_name])
+
+  // Run full-file readiness checks once the required roles are mapped.
+  useEffect(() => {
+    if (!source_id || !hasRequiredMapping) {
+      setQuality(null)
+      setQualityError(null)
+      setQualityLoading(false)
+      return
+    }
+    let cancelled = false
+    const timer = setTimeout(() => {
+      setQualityLoading(true)
+      setQualityError(null)
+      api.sources.getQuality(source_id, mapping as ColumnMapping)
+        .then(({ data }) => { if (!cancelled) setQuality(data) })
+        .catch((err: any) => {
+          if (!cancelled) {
+            setQuality(null)
+            setQualityError(err?.response?.data?.detail ?? 'Could not check data quality.')
+          }
+        })
+        .finally(() => { if (!cancelled) setQualityLoading(false) })
+    }, 350)
+    return () => { cancelled = true; clearTimeout(timer) }
+  }, [source_id, hasRequiredMapping, mapping.user_id, mapping.timestamp, mapping.event_name, mapping.properties])
 
   // Parse sample timestamp values from preview rows to show how they'll be interpreted
   const timestampPreviews = useMemo(() => {
@@ -738,7 +912,7 @@ export default function Mapping() {
     return result
   }, [propertyList, rows])
 
-  const canSubmit = !!mapping.user_id && !!mapping.timestamp && !!mapping.event_name && !loading
+  const canSubmit = hasRequiredMapping && !loading && !qualityLoading && quality?.status !== 'blocked'
   const tableColumns = columns.map(col => ({ key: col, label: col, mono: true }))
 
   if (fetchError) {
@@ -985,6 +1159,13 @@ export default function Mapping() {
               />
             </div>
           </div>
+
+          <DataReadinessPanel
+            report={quality}
+            loading={qualityLoading}
+            error={qualityError}
+            hasRequired={hasRequiredMapping}
+          />
 
           {submitError && (
             <p className="text-[12px] text-danger">{submitError}</p>

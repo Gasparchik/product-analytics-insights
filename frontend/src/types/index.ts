@@ -38,6 +38,42 @@ export interface Source {
   }
 }
 
+export interface DataQualityIssue {
+  severity: 'error' | 'warning'
+  title: string
+  detail: string
+}
+
+export interface DataQualityProperty {
+  column: string
+  fill_rate: number
+  unique_count: number
+  unique_ratio: number
+  top_values: { value: string; count: number }[]
+  flags: string[]
+}
+
+export interface DataQualityReport {
+  status: 'ready' | 'warning' | 'blocked'
+  score: number
+  total_rows: number
+  date_range: { start: string | null; end: string | null; days: number }
+  metrics: {
+    unique_users?: number
+    unique_events?: number
+    empty_user_id_rows?: number
+    empty_user_id_ratio?: number
+    empty_event_name_rows?: number
+    empty_event_name_ratio?: number
+    invalid_timestamp_rows?: number
+    invalid_timestamp_ratio?: number
+  }
+  top_events: { name: string; count: number }[]
+  properties: DataQualityProperty[]
+  issues: DataQualityIssue[]
+  missing_required: { field: string; column?: string }[]
+}
+
 export interface Insight {
   id: string
   source_id: string
