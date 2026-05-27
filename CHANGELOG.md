@@ -16,6 +16,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Added a backend quality endpoint for mapped event datasets.
 - Added an expandable property quality summary with `+N more` and `Show less`.
 - Added `VITE_API_TARGET` support for local API proxy overrides.
+<img width="2520" height="1231" alt="data-readiness-feature" src="https://github.com/user-attachments/assets/5a960d91-d528-4b46-9980-efe45dc2c2b8" />
 
 ### Changed
 - Prevented analysis from starting while data readiness checks are still running or blocked.
