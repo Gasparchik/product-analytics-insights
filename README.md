@@ -242,6 +242,8 @@ product-analytics-insights/
 
 MIT — see [LICENSE](LICENSE).
 
+See [CHANGELOG.md](CHANGELOG.md) for release history.
+
 ---
 
 Built by **Gaspar Nikogosyan** · [LinkedIn](https://www.linkedin.com/in/gaspar-nikogosyan/) · [gasparnikogosyan@gmail.com](mailto:gasparnikogosyan@gmail.com)
