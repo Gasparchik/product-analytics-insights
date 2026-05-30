@@ -180,12 +180,15 @@ const DASH_INSIGHTS = [
   },
 ]
 
-const DEMO_QUESTIONS = [
-  { id: 'q-mobile-d3',     question: 'Why is mobile D3 retention dropping?',               askedAt: '2 minutes ago' },
-  { id: 'q-paid-channel',  question: 'Which acquisition channel has the lowest conversion this month?', askedAt: '12 minutes ago' },
-  { id: 'q-power-users',   question: 'What feature correlates most with weekly engagement?', askedAt: '38 minutes ago' },
-  { id: 'q-task-decline',  question: 'Did task completions drop after the May 12 release?', askedAt: 'yesterday' },
-]
+function _relTime(iso: string): string {
+  const normalized = /[Z+\-]\d*$/.test(iso.trim()) ? iso : iso + 'Z'
+  const mins = Math.floor((Date.now() - new Date(normalized).getTime()) / 60_000)
+  if (mins < 2) return 'just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  return `${Math.floor(hrs / 24)}d ago`
+}
 
 // ── Window types ─────────────────────────────────────────────────
 type WPreset = 'last7' | 'last14' | 'last30' | 'last90' | 'all' | 'custom'
@@ -2235,10 +2238,20 @@ function QASidePanel() {
 
   const [draft, setDraft] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [questions, setQuestions] = useState<RecentQ[]>(DEMO_QUESTIONS)
+  const [questions, setQuestions] = useState<RecentQ[]>([])
   const [demoSuggestions, setDemoSuggestions] = useState<string[]>([])
   const [demoHint, setDemoHint] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Load real questions for non-demo sources
+  useEffect(() => {
+    if (isDemo || !source_id) return
+    api.questions.listForSource(source_id)
+      .then(({ data }) => setQuestions(
+        data.map(q => ({ id: q.id, question: q.text, askedAt: _relTime(q.created_at) }))
+      ))
+      .catch(() => {})
+  }, [isDemo, source_id])
 
   // Fetch pre-computed suggestions for demo source
   useEffect(() => {
@@ -2511,6 +2524,7 @@ function MainColumn({ win, desc, analysisStatus, activeKey, filteredStatus, glob
   const [insightsBg, setInsightsBg] = useState<'idle' | 'generating' | 'ready'>('idle')
   const [bgDismissed, setBgDismissed] = useState(false)
   const wentThroughLoading = useRef(false)
+  const [investigatingId, setInvestigatingId] = useState<string | null>(null)
 
   // Reset notification when navigating to a different source
   useEffect(() => { setInsightsBg('idle'); setBgDismissed(false); wentThroughLoading.current = false }, [source_id])
@@ -2825,7 +2839,18 @@ function MainColumn({ win, desc, analysisStatus, activeKey, filteredStatus, glob
                       tags={ins.tags}
                       pinned={isPinned}
                       dismissed={isDismissed}
-                      onInvestigate={() => navigate(`/question/q-${ins.id}`)}
+                      onInvestigate={async () => {
+                        if (!source_id || investigatingId) return
+                        setInvestigatingId(ins.id)
+                        try {
+                          const { data } = await api.questions.ask({ source_id, text: ins.title })
+                          navigate(`/question/${data.id}`)
+                        } catch {
+                          navigate(`/question/q-${ins.id}`, { state: { question: ins.title } })
+                        } finally {
+                          setInvestigatingId(null)
+                        }
+                      }}
                       onPin={() => togglePin(ins.id)}
                       onDismiss={() => toggleDismiss(ins.id)}
                     />

@@ -121,6 +121,19 @@ async def get_source(source_id: str):
     return record
 
 
+@router.delete("/{source_id}")
+async def delete_source(source_id: str):
+    record = storage.get(source_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Source not found")
+    storage.delete(source_id)
+    csv_path = DATA_DIR / f"{source_id}.csv"
+    if csv_path.exists():
+        csv_path.unlink()
+    analyses_storage.delete(source_id)
+    return {"ok": True}
+
+
 @router.get("/{source_id}/event_counts")
 async def get_event_counts(source_id: str, col: str = Query(..., description="Column to count")):
     record = storage.get(source_id)

@@ -20,6 +20,17 @@ app.include_router(analysis_router)
 app.include_router(questions_router)
 
 
+@app.on_event("startup")
+async def _seed_demo():
+    from backend.storage import JSONStorage
+    if not JSONStorage("sources").get("demo"):
+        try:
+            from backend.api.sources import create_from_demo
+            await create_from_demo()
+        except Exception:
+            pass
+
+
 @app.get("/api/health")
 async def health():
     return {"status": "ok"}

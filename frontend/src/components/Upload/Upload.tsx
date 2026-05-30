@@ -392,29 +392,54 @@ export default function Upload() {
               const rows = src.metadata?.total_rows as number | undefined
               const isDemoDataset = src.is_demo === true
               return (
-                <button
+                <div
                   key={src.id}
-                  type="button"
-                  onClick={() => navigate(`/dashboard/${src.id}`)}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left cursor-pointer transition-colors duration-[80ms]"
-                  style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface-2)'; e.currentTarget.style.borderColor = 'var(--border-strong)' }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.borderColor = 'var(--border)' }}
+                  className="w-full flex items-center gap-2"
                 >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[13px] font-medium text-fg truncate">{src.name}</span>
-                      {isDemoDataset && <Tag tone="outline">Demo</Tag>}
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/dashboard/${src.id}`)}
+                    className="flex-1 flex items-center gap-3 px-4 py-3 rounded-lg text-left cursor-pointer transition-colors duration-[80ms] min-w-0"
+                    style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--surface-2)'; e.currentTarget.style.borderColor = 'var(--border-strong)' }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'var(--surface)'; e.currentTarget.style.borderColor = 'var(--border)' }}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[13px] font-medium text-fg truncate">{src.name}</span>
+                        {isDemoDataset && <Tag tone="outline">Demo</Tag>}
+                      </div>
+                      {rows !== undefined && (
+                        <div className="text-[12px] text-fg-muted mt-[1px]">{formatRows(rows)}</div>
+                      )}
                     </div>
-                    {rows !== undefined && (
-                      <div className="text-[12px] text-fg-muted mt-[1px]">{formatRows(rows)}</div>
-                    )}
-                  </div>
-                  <div className="text-[11px] text-fg-subtle shrink-0">{timeAgo(src.created_at)}</div>
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-fg-subtle shrink-0">
-                    <path d="M2.5 6h7M6.5 3L9.5 6l-3 3" />
-                  </svg>
-                </button>
+                    <div className="text-[11px] text-fg-subtle shrink-0">{timeAgo(src.created_at)}</div>
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-fg-subtle shrink-0">
+                      <path d="M2.5 6h7M6.5 3L9.5 6l-3 3" />
+                    </svg>
+                  </button>
+                  {!isDemoDataset && (
+                    <button
+                      type="button"
+                      title="Delete dataset"
+                      onClick={async () => {
+                        if (!window.confirm(`Delete "${src.name}"?`)) return
+                        try {
+                          await api.sources.delete(src.id)
+                          setRecentSources(prev => prev.filter(s => s.id !== src.id))
+                        } catch {}
+                      }}
+                      className="shrink-0 flex items-center justify-center w-[32px] h-[32px] rounded-md transition-colors duration-[80ms]"
+                      style={{ color: 'var(--fg-subtle)', border: '1px solid transparent' }}
+                      onMouseEnter={e => { e.currentTarget.style.color = 'var(--danger)'; e.currentTarget.style.background = 'var(--danger-tint, color-mix(in oklch, var(--danger) 10%, transparent))' }}
+                      onMouseLeave={e => { e.currentTarget.style.color = 'var(--fg-subtle)'; e.currentTarget.style.background = 'transparent' }}
+                    >
+                      <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M2 3.5h9M4.5 3.5V2.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v1M10.5 3.5l-.6 7a.5.5 0 0 1-.5.5H3.6a.5.5 0 0 1-.5-.5l-.6-7" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
               )
             })}
           </div>
