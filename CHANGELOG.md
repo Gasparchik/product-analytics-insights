@@ -4,10 +4,9 @@ All notable changes to this project will be documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.3.0] - 2026-05-31
 
 ### Added
-- Added this changelog.
 - Redesigned the column mapping screen with a larger data preview, a focused right-side mapping panel, and a sticky readiness/action dock.
 - Added hover highlighting between mapped fields and their corresponding preview columns.
 - Added a dismissible mapping guidance banner and warning hints for partially filled property columns.
