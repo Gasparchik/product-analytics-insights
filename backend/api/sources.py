@@ -16,6 +16,7 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 storage = JSONStorage("sources")
 analyses_storage = JSONStorage("analyses")
+questions_storage = JSONStorage("questions")
 
 
 def _detect_format(columns: list[str]) -> str:
@@ -128,9 +129,13 @@ async def delete_source(source_id: str):
         raise HTTPException(status_code=404, detail="Source not found")
     storage.delete(source_id)
     csv_path = DATA_DIR / f"{source_id}.csv"
-    if csv_path.exists():
-        csv_path.unlink()
-    analyses_storage.delete(source_id)
+    csv_path.unlink(missing_ok=True)
+    # Remove every cached analysis for this source — both the full run
+    # (id == source_id) and windowed runs (id == f"{source_id}_{start}_{end}",
+    # all carry source_id) — plus all of its questions. Without this, deleting a
+    # source leaks its analyses + questions on disk forever.
+    analyses_storage.delete_where(lambda r: r.get("source_id") == source_id)
+    questions_storage.delete_where(lambda r: r.get("source_id") == source_id)
     return {"ok": True}
 
 
@@ -448,16 +453,3 @@ async def create_from_demo():
     storage.save(source.model_dump(mode="json"))
 
     return {"source_id": source_id}
-
-
-@router.delete("/{source_id}")
-async def delete_source(source_id: str):
-    ok = storage.delete(source_id)
-    if not ok:
-        raise HTTPException(status_code=404, detail="Source not found")
-    csv_path = DATA_DIR / f"{source_id}.csv"
-    csv_path.unlink(missing_ok=True)
-    analyses_storage.delete_where(
-        lambda r: r.get("source_id") == source_id or str(r.get("id", "")).startswith(source_id)
-    )
-    return {"status": "deleted"}

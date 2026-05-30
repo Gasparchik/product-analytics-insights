@@ -146,13 +146,17 @@ async def _generate_insights_for_run(run: dict, source: dict, source_id: str, ca
     insights = await _generate_insights_safe(run, source)
     if not insights:
         return
-    # Re-read storage in case another background task already updated this key
-    latest = analyses_storage.get(cache_key) or run
-    if latest.get("insights"):
-        return  # someone else got there first
-    latest["insights"] = insights
-    analyses_storage.save(latest)
-    logger.info("Background insights ready for %s (key=%s)", source_id, cache_key)
+
+    # Atomic compare-and-set: only fill insights if no concurrent task already
+    # did (and only if the run still exists — it may have been deleted mid-flight).
+    def _merge(rec: dict) -> dict | None:
+        if rec.get("insights"):
+            return None  # someone else got there first
+        return {**rec, "insights": insights}
+
+    saved = analyses_storage.update(cache_key, _merge)
+    if saved:
+        logger.info("Background insights ready for %s (key=%s)", source_id, cache_key)
 
 
 async def _precompute_windows(source_id: str, source: dict, mapping: dict, df=None) -> None:
