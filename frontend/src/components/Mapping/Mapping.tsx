@@ -5,7 +5,7 @@ import { api } from '../../api'
 import { useAnalysisStore } from '../../store/analysisStore'
 import { useSourceStore } from '../../store/sourceStore'
 import type { ColumnMapping, DataQualityReport } from '../../types'
-import { Button, Field, Select, DataTable, InfoTip } from '../../ui'
+import { Button, Field, Select, InfoTip } from '../../ui'
 
 function BackIcon() {
   return (
@@ -197,12 +197,13 @@ function FormatExample({ profileId }: { profileId: string }) {
 }
 
 // ── Tag-input with built-in dropdown ─────────────────────────────
-function PropertyTagSelect({ values, options, onAdd, onRemove, warnings }: {
+function PropertyTagSelect({ values, options, onAdd, onRemove, highlightedValue, onHighlight }: {
   values: string[]
   options: string[]
   onAdd: (col: string) => void
   onRemove: (col: string) => void
-  warnings?: Record<string, string>
+  highlightedValue?: string | null
+  onHighlight?: (col: string | null) => void
 }) {
   const [open, setOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)
@@ -253,41 +254,34 @@ function PropertyTagSelect({ values, options, onAdd, onRemove, warnings }: {
           cursor: noOptions ? 'default' : 'pointer',
         }}
       >
-        {values.map(v => {
-          const warn = warnings?.[v]
-          return (
-            <span
-              key={v}
-              className="inline-flex items-center gap-[5px] text-[12px] py-[3px] pl-[8px] pr-[4px] bg-surface-2 border rounded-sm text-fg"
-              style={{ borderColor: warn ? 'var(--warning, #d97706)' : 'var(--border)' }}
+        {values.map(v => (
+          <span
+            key={v}
+            onMouseEnter={() => onHighlight?.(v)}
+            onMouseLeave={() => onHighlight?.(null)}
+            onFocus={() => onHighlight?.(v)}
+            onBlur={() => onHighlight?.(null)}
+            className="inline-flex items-center gap-[5px] text-[12px] py-[3px] pl-[8px] pr-[4px] bg-surface-2 border rounded-sm text-fg transition-[border-color,background-color]"
+            style={{
+              borderColor: highlightedValue === v ? 'var(--accent)' : 'var(--border)',
+              background: highlightedValue === v ? 'var(--accent-tint)' : 'var(--surface-2)',
+            }}
+          >
+            {v}
+            <button
+              type="button"
+              data-remove="true"
+              onPointerDown={e => e.stopPropagation()}
+              onClick={e => { e.stopPropagation(); onRemove(v) }}
+              className="flex text-fg-subtle hover:text-fg cursor-pointer"
+              aria-label={`Remove ${v}`}
             >
-              {v}
-              {warn && (
-                <span
-                  title={warn}
-                  className="flex shrink-0 cursor-help"
-                  style={{ color: 'var(--warning, #d97706)' }}
-                  onPointerDown={e => e.stopPropagation()}
-                  onClick={e => e.stopPropagation()}
-                >
-                  <WarnIcon />
-                </span>
-              )}
-              <button
-                type="button"
-                data-remove="true"
-                onPointerDown={e => e.stopPropagation()}
-                onClick={e => { e.stopPropagation(); onRemove(v) }}
-                className="flex text-fg-subtle hover:text-fg cursor-pointer"
-                aria-label={`Remove ${v}`}
-              >
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                  <path d="M2 2l6 6M8 2l-6 6" />
-                </svg>
-              </button>
-            </span>
-          )
-        })}
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                <path d="M2 2l6 6M8 2l-6 6" />
+              </svg>
+            </button>
+          </span>
+        ))}
         {values.length === 0 && !open && (
           <span className="text-[13px] text-fg-subtle select-none">+ Add column…</span>
         )}
@@ -307,7 +301,8 @@ function PropertyTagSelect({ values, options, onAdd, onRemove, warnings }: {
               key={opt}
               role="option"
               aria-selected={i === activeIndex}
-              onMouseEnter={() => setActiveIndex(i)}
+              onMouseEnter={() => { setActiveIndex(i); onHighlight?.(opt) }}
+              onMouseLeave={() => onHighlight?.(null)}
               onMouseDown={e => { e.preventDefault(); commit(opt) }}
               className="px-[12px] py-[7px] text-[13px] text-fg cursor-pointer"
               style={{ background: i === activeIndex ? 'var(--surface-2)' : 'transparent' }}
@@ -620,6 +615,411 @@ function DataReadinessPanel({
   )
 }
 
+function RolePill({ label }: { label: string }) {
+  return (
+    <span
+      className="inline-flex items-center h-[17px] px-[5px] rounded-[3px] text-[9px] font-semibold uppercase tracking-wide"
+      style={{
+        color: 'var(--accent)',
+        background: 'var(--accent-tint)',
+        border: '1px solid color-mix(in oklch, var(--accent) 35%, transparent)',
+      }}
+    >
+      {label}
+    </span>
+  )
+}
+
+function ColumnQualityTag({ value }: { value: number }) {
+  const pct = Math.round(value * 100)
+  return (
+    <span
+      className="inline-flex items-center gap-[3px] text-[10px] text-warning tabular-nums cursor-help"
+      title={`${pct}% filled — rows missing this value are skipped for this property.`}
+    >
+      <WarnIcon />
+      {pct}%
+    </span>
+  )
+}
+
+function MappingPreviewTable({
+  columns,
+  rows,
+  mapping,
+  propertyList,
+  quality,
+  highlightedColumn,
+  onHighlightColumn,
+}: {
+  columns: string[]
+  rows: Record<string, string>[]
+  mapping: Partial<ColumnMapping>
+  propertyList: string[]
+  quality: DataQualityReport | null
+  highlightedColumn: string | null
+  onHighlightColumn: (col: string | null) => void
+}) {
+  const propQuality = new Map((quality?.properties ?? []).map(p => [p.column, p]))
+
+  function roleFor(col: string): string | null {
+    if (mapping.user_id === col) return 'USER'
+    if (mapping.timestamp === col) return 'TIME'
+    if (mapping.event_name === col) return 'EVENT'
+    return null
+  }
+
+  return (
+    <div className="border border-border rounded-lg overflow-hidden bg-surface">
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse font-sans">
+          <thead>
+            <tr className="bg-surface-2">
+              {columns.map(col => {
+                const role = roleFor(col)
+                const prop = propQuality.get(col)
+                const isProperty = propertyList.includes(col)
+                const showWarn = prop && (prop.fill_rate < 1 || prop.flags.length > 0)
+                const highlighted = highlightedColumn === col
+                return (
+                  <th
+                    key={col}
+                    onMouseEnter={() => onHighlightColumn(col)}
+                    onMouseLeave={() => onHighlightColumn(null)}
+                    className="text-left px-3 py-[8px] border-b border-border whitespace-nowrap transition-[background-color,border-color]"
+                    style={{
+                      background: highlighted ? 'var(--accent-tint)' : undefined,
+                      borderLeft: highlighted ? '1px solid var(--accent)' : undefined,
+                      borderRight: highlighted ? '1px solid var(--accent)' : undefined,
+                    }}
+                  >
+                    <div className="flex items-center gap-[6px] min-w-0">
+                      <span className="font-mono text-[12px] font-medium text-fg truncate">{col}</span>
+                      {role && <RolePill label={role} />}
+                      {!role && isProperty && <span className="w-[5px] h-[5px] rounded-full bg-fg-subtle shrink-0" title="Property column" />}
+                      {showWarn && <ColumnQualityTag value={prop.fill_rate} />}
+                    </div>
+                  </th>
+                )
+              })}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, ri) => (
+              <tr key={ri} className={ri > 0 ? 'border-t border-border' : undefined}>
+                {columns.map((col, ci) => {
+                  const highlighted = highlightedColumn === col
+                  return (
+                    <td
+                      key={col}
+                      onMouseEnter={() => onHighlightColumn(col)}
+                      onMouseLeave={() => onHighlightColumn(null)}
+                      className={[
+                        'px-3 py-[8px] whitespace-nowrap max-w-[220px] overflow-hidden text-ellipsis',
+                        'text-[13px] leading-none transition-[background-color,border-color]',
+                        ci === 0 ? 'text-fg' : 'text-fg-muted',
+                        'font-mono text-[12px]',
+                      ].join(' ')}
+                      style={{
+                        background: highlighted ? 'var(--accent-tint)' : undefined,
+                        borderLeft: highlighted ? '1px solid var(--accent)' : undefined,
+                        borderRight: highlighted ? '1px solid var(--accent)' : undefined,
+                      }}
+                    >
+                      {String(row[col] ?? '')}
+                    </td>
+                  )
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function ReadinessCheck({
+  title,
+  detail,
+  state,
+}: {
+  title: string
+  detail: string
+  state: 'ok' | 'warning' | 'error' | 'idle' | 'loading'
+}) {
+  const color =
+    state === 'ok' ? 'var(--success)' :
+    state === 'warning' ? 'var(--warning)' :
+    state === 'error' ? 'var(--danger)' :
+    'var(--fg-subtle)'
+
+  return (
+    <div className="flex items-center gap-[9px] min-w-0">
+      <span
+        className="w-[17px] h-[17px] rounded-full inline-flex items-center justify-center shrink-0"
+        style={{ color, background: state === 'idle' || state === 'loading' ? 'var(--surface-2)' : 'color-mix(in oklch, currentColor 12%, transparent)' }}
+      >
+        {state === 'loading' ? <SpinnerIcon /> : state === 'ok' ? <CheckIcon /> : state === 'idle' ? null : <WarnIcon />}
+      </span>
+      <div className="min-w-0">
+        <div className="text-[12px] font-medium text-fg truncate">{title}</div>
+        <div className="text-[11px] text-fg-subtle truncate">{detail}</div>
+      </div>
+    </div>
+  )
+}
+
+function DataReadinessDetails({
+  report,
+  loading,
+  error,
+  hasRequired,
+}: {
+  report: DataQualityReport | null
+  loading: boolean
+  error: string | null
+  hasRequired: boolean
+}) {
+  const [showAllProperties, setShowAllProperties] = useState(false)
+  const metrics = report?.metrics ?? {}
+  const visibleProperties = report ? (showAllProperties ? report.properties : report.properties.slice(0, 5)) : []
+
+  if (!hasRequired) {
+    return (
+      <div className="text-[12px] text-fg-subtle bg-surface border border-border rounded-md px-3 py-[9px]">
+        Select user id, timestamp, and event name to run checks.
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 text-[12px] text-fg-muted bg-surface border border-border rounded-md px-3 py-[9px]">
+        <SpinnerIcon />
+        Checking mapped columns...
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="text-[12px] text-danger bg-surface border border-border rounded-md px-3 py-[9px]">
+        {error}
+      </div>
+    )
+  }
+
+  if (!report) return null
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+      <div className="grid grid-cols-2 gap-[6px]">
+        <div className="bg-surface border border-border rounded-md px-3 py-[8px]">
+          <div className="text-[10px] text-fg-subtle uppercase tracking-wide">Rows</div>
+          <div className="text-[13px] font-medium text-fg tabular-nums mt-[2px]">{report.total_rows.toLocaleString()}</div>
+        </div>
+        <div className="bg-surface border border-border rounded-md px-3 py-[8px]">
+          <div className="text-[10px] text-fg-subtle uppercase tracking-wide">Users</div>
+          <div className="text-[13px] font-medium text-fg tabular-nums mt-[2px]">{(metrics.unique_users ?? 0).toLocaleString()}</div>
+        </div>
+        <div className="bg-surface border border-border rounded-md px-3 py-[8px]">
+          <div className="text-[10px] text-fg-subtle uppercase tracking-wide">Events</div>
+          <div className="text-[13px] font-medium text-fg tabular-nums mt-[2px]">{(metrics.unique_events ?? 0).toLocaleString()}</div>
+        </div>
+        <div className="bg-surface border border-border rounded-md px-3 py-[8px]">
+          <div className="text-[10px] text-fg-subtle uppercase tracking-wide">Period</div>
+          <div className="text-[13px] font-medium text-fg tabular-nums mt-[2px]">{report.date_range.days || 0}d</div>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="flex flex-col gap-[7px] min-w-0">
+          <div className="text-[11px] font-medium text-fg-muted">Checks</div>
+          <div className="flex justify-between gap-3 text-[11px] text-fg-muted">
+            <span>Invalid timestamps</span>
+            <span className="tabular-nums">{fmtPct(metrics.invalid_timestamp_ratio)}</span>
+          </div>
+          <div className="flex justify-between gap-3 text-[11px] text-fg-muted">
+            <span>Empty user ids</span>
+            <span className="tabular-nums">{fmtPct(metrics.empty_user_id_ratio)}</span>
+          </div>
+          <div className="flex justify-between gap-3 text-[11px] text-fg-muted">
+            <span>Empty event names</span>
+            <span className="tabular-nums">{fmtPct(metrics.empty_event_name_ratio)}</span>
+          </div>
+
+          {report.issues.length > 0 && (
+            <div className="border-t border-border pt-[7px] flex flex-col gap-[6px]">
+              {report.issues.slice(0, 3).map((issue, i) => (
+                <div key={i} className="flex gap-[7px] text-[11px] leading-[1.35]">
+                  <span style={{ color: issue.severity === 'error' ? 'var(--danger)' : 'var(--warning)' }} className="mt-[1px]">
+                    <WarnIcon />
+                  </span>
+                  <div className="min-w-0">
+                    <div className="font-medium text-fg truncate">{issue.title}</div>
+                    <div className="text-fg-subtle line-clamp-2">{issue.detail}</div>
+                  </div>
+                </div>
+              ))}
+              {report.issues.length > 3 && (
+                <div className="text-[11px] text-fg-subtle">+{report.issues.length - 3} more checks</div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-[6px] min-w-0">
+          <div className="text-[11px] font-medium text-fg-muted">Properties</div>
+          {visibleProperties.length > 0 ? (
+            visibleProperties.map(prop => (
+              <div key={prop.column} className="flex items-center justify-between gap-2 text-[11px]">
+                <span className="font-mono text-fg-muted truncate">{prop.column}</span>
+                <span className="text-fg-subtle shrink-0">{fmtPct(prop.fill_rate)} filled · {prop.unique_count.toLocaleString()} values</span>
+              </div>
+            ))
+          ) : (
+            <div className="text-[11px] text-fg-subtle">No property columns selected.</div>
+          )}
+          {report.properties.length > 5 && !showAllProperties && (
+            <button
+              type="button"
+              onClick={() => setShowAllProperties(true)}
+              className="text-[11px] text-fg-subtle hover:text-fg cursor-pointer text-left bg-transparent border-0 p-0 transition-colors"
+            >
+              +{report.properties.length - 5} more
+            </button>
+          )}
+          {showAllProperties && report.properties.length > 5 && (
+            <button
+              type="button"
+              onClick={() => setShowAllProperties(false)}
+              className="text-[11px] text-accent hover:opacity-80 cursor-pointer text-left bg-transparent border-0 p-0 transition-opacity"
+            >
+              Show less
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function BottomReadinessDock({
+  report,
+  loading,
+  error,
+  hasRequired,
+  canSubmit,
+  submitStep,
+  onCancel,
+  onAnalyze,
+}: {
+  report: DataQualityReport | null
+  loading: boolean
+  error: string | null
+  hasRequired: boolean
+  canSubmit: boolean
+  submitStep: 'idle' | 'saving' | 'redirecting'
+  onCancel: () => void
+  onAnalyze: () => void
+}) {
+  const [detailsOpen, setDetailsOpen] = useState(false)
+  const metrics = report?.metrics ?? {}
+  const invalidTs = metrics.invalid_timestamp_rows ?? 0
+  const emptyUsers = metrics.empty_user_id_rows ?? 0
+  const emptyEvents = metrics.empty_event_name_rows ?? 0
+  const status = !hasRequired ? 'idle' : loading ? 'loading' : error || report?.status === 'blocked' ? 'error' : report?.status === 'warning' ? 'warning' : report ? 'ok' : 'idle'
+  const readyLabel =
+    !hasRequired ? 'Map required roles' :
+    loading ? 'Checking data' :
+    error ? 'Checks failed' :
+    report?.status === 'blocked' ? 'Needs attention' :
+    report?.status === 'warning' ? 'Ready with warnings' :
+    'Ready to analyze'
+
+  return (
+    <div className="sticky bottom-0 z-20 border-t border-border bg-bg">
+      <div className="grid grid-cols-4 gap-4 px-7 py-[11px] border-b border-border">
+        <ReadinessCheck
+          title="Timestamps parse cleanly"
+          detail={report ? `${invalidTs.toLocaleString()} invalid of ${report.total_rows.toLocaleString()}` : 'Waiting for mapping'}
+          state={!hasRequired ? 'idle' : loading ? 'loading' : invalidTs > 0 ? 'warning' : report ? 'ok' : 'idle'}
+        />
+        <ReadinessCheck
+          title="User IDs present"
+          detail={report ? `${emptyUsers.toLocaleString()} empty rows` : 'Waiting for mapping'}
+          state={!hasRequired ? 'idle' : loading ? 'loading' : emptyUsers > 0 ? 'warning' : report ? 'ok' : 'idle'}
+        />
+        <ReadinessCheck
+          title="Event names present"
+          detail={report ? `${(metrics.unique_events ?? 0).toLocaleString()} distinct events` : 'Waiting for mapping'}
+          state={!hasRequired ? 'idle' : loading ? 'loading' : emptyEvents > 0 ? 'warning' : report ? 'ok' : 'idle'}
+        />
+        <ReadinessCheck
+          title="Date range"
+          detail={report?.date_range.start && report?.date_range.end ? `${report.date_range.start} - ${report.date_range.end} · ${report.date_range.days} days` : 'Waiting for dates'}
+          state={!hasRequired ? 'idle' : loading ? 'loading' : report?.date_range.days ? 'ok' : 'idle'}
+        />
+      </div>
+      {detailsOpen && (
+        <div className="px-7 py-[12px] border-b border-border bg-surface-2">
+          <DataReadinessDetails
+            report={report}
+            loading={loading}
+            error={error}
+            hasRequired={hasRequired}
+          />
+        </div>
+      )}
+      <div className="flex items-center justify-between gap-4 px-7 py-[10px]">
+        <div className="flex items-center gap-[9px] min-w-0">
+          <span
+            className="w-[18px] h-[18px] rounded-full inline-flex items-center justify-center shrink-0"
+            style={{ color: status === 'ok' ? 'var(--success)' : status === 'warning' ? 'var(--warning)' : status === 'error' ? 'var(--danger)' : 'var(--fg-subtle)', background: 'var(--surface-2)' }}
+          >
+            {status === 'loading' ? <SpinnerIcon /> : status === 'ok' ? <CheckIcon /> : status === 'idle' ? null : <WarnIcon />}
+          </span>
+          <span className="text-[13px] font-medium text-fg">{readyLabel}</span>
+          {report && (
+            <span className="text-[13px] text-fg-muted truncate">
+              {report.total_rows.toLocaleString()} rows · {(metrics.unique_users ?? 0).toLocaleString()} users · {(metrics.unique_events ?? 0).toLocaleString()} events · {report.date_range.days} days
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => setDetailsOpen(v => !v)}
+            className="inline-flex items-center gap-[5px] h-[24px] px-[8px] rounded-md text-[11px] font-medium text-accent bg-surface border border-border hover:border-accent cursor-pointer shrink-0 transition-colors"
+          >
+            {detailsOpen ? 'Hide checks' : 'Show checks'}
+            <svg
+              width="10" height="10" viewBox="0 0 10 10" fill="none"
+              stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
+              style={{ transform: detailsOpen ? 'rotate(180deg)' : 'none', transition: 'transform 150ms' }}
+              className="shrink-0"
+            >
+              <path d="M2 3.5l3 3 3-3" />
+            </svg>
+          </button>
+        </div>
+        {submitStep !== 'idle' ? (
+          <div className="flex items-center gap-[10px]">
+            <SpinnerIcon />
+            <span className="text-[13px] text-fg-muted">{submitStep === 'saving' ? 'Saving mapping' : 'Redirecting to dashboard'}</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 shrink-0">
+            <Button variant="ghost" onClick={onCancel}>Cancel</Button>
+            <Button variant="primary" disabled={!canSubmit} onClick={onAnalyze} trailing={<ArrowRightIcon />}>
+              Analyze
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function Mapping() {
   const { source_id } = useParams<{ source_id: string }>()
   const navigate = useNavigate()
@@ -755,6 +1155,8 @@ export default function Mapping() {
   const [quality, setQuality] = useState<DataQualityReport | null>(null)
   const [qualityLoading, setQualityLoading] = useState(false)
   const [qualityError, setQualityError] = useState<string | null>(null)
+  const [optionalOpen, setOptionalOpen] = useState(true)
+  const [highlightedColumn, setHighlightedColumn] = useState<string | null>(null)
   const hasRequiredMapping = !!mapping.user_id && !!mapping.timestamp && !!mapping.event_name
 
   // Fetch full-dataset event counts whenever the chosen column changes
@@ -913,7 +1315,10 @@ export default function Mapping() {
   }, [propertyList, rows])
 
   const canSubmit = hasRequiredMapping && !loading && !qualityLoading && quality?.status !== 'blocked'
-  const tableColumns = columns.map(col => ({ key: col, label: col, mono: true }))
+  const highlightStyle = (active: boolean) => ({
+    background: active ? 'var(--accent-tint)' : 'transparent',
+    borderColor: active ? 'color-mix(in oklch, var(--accent) 30%, transparent)' : 'transparent',
+  })
 
   if (fetchError) {
     return (
@@ -950,15 +1355,15 @@ export default function Mapping() {
       </div>
 
       {/* Auto-detect notice */}
-      {detectedFormat !== 'custom' && !dismissed && (
+      {!dismissed && (
         <div className="mx-7 mt-1 px-3 py-[10px] flex items-center gap-[10px] rounded-md"
           style={{ background: 'var(--accent-tint)', border: '1px solid var(--accent-tint)' }}
         >
           <span className="text-accent flex-shrink-0"><CheckIcon /></span>
           <div className="flex-1 min-w-0 text-[13px] text-fg">
-            <span className="font-medium capitalize">{detectedFormat} export detected.</span>
+            <span className="font-medium">Mapping pre-filled from your headers.</span>
             <span className="text-fg-muted ml-[6px]">
-              We've pre-filled the mapping — review and analyze, or override anything below.
+              Review the three roles on the right, then Analyze. Hover a field to find its column.
             </span>
           </div>
           <button
@@ -970,19 +1375,44 @@ export default function Mapping() {
         </div>
       )}
 
-      {/* Block 1: Profile selection */}
-      <ProfileSelector value={profileId} onChange={setProfileId} />
-
-      {/* Block 2: Format example for selected profile */}
-      <FormatExample profileId={profileId} />
-
-      {/* Body: form + preview */}
+      {/* Body: preview + form */}
       <div
-        className="flex-1 grid gap-7 px-7 py-3 min-h-0 items-start"
-        style={{ gridTemplateColumns: 'minmax(320px, 1fr) minmax(0, 1.55fr)' }}
+        className="flex-1 grid gap-6 px-7 py-3 pb-6 min-h-0 items-start"
+        style={{ gridTemplateColumns: 'minmax(0, 1.55fr) minmax(360px, 0.95fr)' }}
       >
         {/* Mapping panel — left so dropdowns open rightward and stay in viewport */}
-        <aside className="bg-surface border border-border rounded-lg p-5 flex flex-col gap-[18px] sticky top-[60px]">
+        <section className="flex flex-col gap-[10px] min-w-0">
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="text-[12px] font-medium text-fg">Preview</span>
+            {totalRows != null && columns.length > 0 && (
+              <span className="text-[11px] text-fg-subtle">
+                First {rows.length} of {totalRows.toLocaleString()} rows · {columns.length} columns
+              </span>
+            )}
+          </div>
+          {columns.length > 0 ? (
+            <MappingPreviewTable
+              columns={columns}
+              rows={rows}
+              mapping={mapping}
+              propertyList={propertyList}
+              quality={quality}
+              highlightedColumn={highlightedColumn}
+              onHighlightColumn={setHighlightedColumn}
+            />
+          ) : (
+            <div className="h-40 flex items-center justify-center text-[13px] text-fg-subtle bg-surface border border-border rounded-lg">
+              Loading...
+            </div>
+          )}
+          <div className="flex items-center gap-[10px] flex-wrap text-[11px] text-fg-subtle">
+            <span className="inline-flex items-center gap-[5px]"><RolePill label="Role" /> mapped role</span>
+            <span className="inline-flex items-center gap-[5px]"><span className="w-[5px] h-[5px] rounded-full bg-fg-subtle" /> kept property</span>
+            <span className="inline-flex items-center gap-[4px] text-warning"><WarnIcon /> partially filled or noisy</span>
+          </div>
+        </section>
+
+        <aside className="bg-surface border border-border rounded-lg p-5 flex flex-col gap-[18px] sticky top-[70px]">
           <TemplatesPanel
             templates={templates}
             columns={columns}
@@ -992,30 +1422,47 @@ export default function Mapping() {
           />
 
           <div>
-            <div className="text-[12px] font-medium text-fg">Required</div>
+            <div className="text-[12px] font-medium text-fg">Required roles</div>
             <div className="text-[11px] text-fg-subtle mt-[2px]">One column per role. The rest are inferred.</div>
           </div>
 
-          <Field label="User identifier" tooltip="Unique identifier per user — not per event session. All events from the same person share one ID.">
-            <Select
-              value={mapping.user_id ?? ''}
-              onChange={e => setRequiredField('user_id', e.target.value)}
-              placeholder="— select column —"
-            >
-              {columns.map(col => <option key={col} value={col}>{col}</option>)}
-            </Select>
-          </Field>
+          <div
+            onMouseEnter={() => mapping.user_id && setHighlightedColumn(mapping.user_id)}
+            onMouseLeave={() => setHighlightedColumn(null)}
+            onFocus={() => mapping.user_id && setHighlightedColumn(mapping.user_id)}
+            onBlur={() => setHighlightedColumn(null)}
+            className="rounded-md border p-[10px] -m-[10px] transition-[background-color,border-color]"
+            style={highlightStyle(!!mapping.user_id && highlightedColumn === mapping.user_id)}
+          >
+            <Field label={<span className="inline-flex items-center gap-[6px]">User identifier <RolePill label="USER" /></span>} tooltip="Unique identifier per user. All events from the same person share one ID.">
+              <Select
+                value={mapping.user_id ?? ''}
+                onChange={e => setRequiredField('user_id', e.target.value)}
+                placeholder="select column"
+              >
+                {columns.map(col => <option key={col} value={col}>{col}</option>)}
+              </Select>
+              <span className="text-[11px] text-fg-subtle">Who performed the event.</span>
+            </Field>
+          </div>
 
-          <div className="flex flex-col gap-[6px]">
+          <div
+            onMouseEnter={() => mapping.timestamp && setHighlightedColumn(mapping.timestamp)}
+            onMouseLeave={() => setHighlightedColumn(null)}
+            onFocus={() => mapping.timestamp && setHighlightedColumn(mapping.timestamp)}
+            onBlur={() => setHighlightedColumn(null)}
+            className="flex flex-col gap-[6px] rounded-md border p-[10px] -m-[10px] transition-[background-color,border-color]"
+            style={highlightStyle(!!mapping.timestamp && highlightedColumn === mapping.timestamp)}
+          >
             <Field
-              label="Event timestamp"
+              label={<span className="inline-flex items-center gap-[6px]">Event timestamp <RolePill label="TIME" /></span>}
               hint={timestampWarning ? undefined : "Parsed as UTC unless an offset is present."}
               error={timestampWarning ?? undefined}
             >
               <Select
                 value={mapping.timestamp ?? ''}
                 onChange={e => setRequiredField('timestamp', e.target.value)}
-                placeholder="— select column —"
+                placeholder="select column"
               >
                 {columns.map(col => <option key={col} value={col}>{col}</option>)}
               </Select>
@@ -1043,12 +1490,19 @@ export default function Mapping() {
             )}
           </div>
 
-          <div className="flex flex-col gap-[6px]">
-            <Field label="Event name" error={eventNameWarning ?? undefined} tooltip="The action the user performed — e.g. 'signup', 'page_view', 'purchase'. Should have low cardinality (10–50 unique values).">
+          <div
+            onMouseEnter={() => mapping.event_name && setHighlightedColumn(mapping.event_name)}
+            onMouseLeave={() => setHighlightedColumn(null)}
+            onFocus={() => mapping.event_name && setHighlightedColumn(mapping.event_name)}
+            onBlur={() => setHighlightedColumn(null)}
+            className="flex flex-col gap-[6px] rounded-md border p-[10px] -m-[10px] transition-[background-color,border-color]"
+            style={highlightStyle(!!mapping.event_name && highlightedColumn === mapping.event_name)}
+          >
+            <Field label={<span className="inline-flex items-center gap-[6px]">Event name <RolePill label="EVENT" /></span>} error={eventNameWarning ?? undefined} tooltip="The action the user performed, e.g. signup, page_view, purchase. Should have low cardinality.">
               <Select
                 value={mapping.event_name ?? ''}
                 onChange={e => setRequiredField('event_name', e.target.value)}
-                placeholder="— select column —"
+                placeholder="select column"
               >
                 {columns.map(col => <option key={col} value={col}>{col}</option>)}
               </Select>
@@ -1107,16 +1561,35 @@ export default function Mapping() {
             )}
           </div>
 
-          {/* Optional */}
-          <div className="border-t border-border pt-[14px] flex flex-col gap-[14px]">
-            <div>
-              <div className="text-[12px] font-medium text-fg mb-[2px]">Optional</div>
-              <div className="text-[11px] text-fg-subtle">Add property columns for segmentation.</div>
-            </div>
+          <div className="border-t border-border pt-[12px] flex flex-col gap-[14px]">
+            <button
+              type="button"
+              onClick={() => setOptionalOpen(v => !v)}
+              className="flex items-center justify-between gap-3 text-left bg-transparent border-0 p-0 cursor-pointer"
+            >
+              <span className="flex items-center gap-[7px] min-w-0">
+                <svg
+                  width="10" height="10" viewBox="0 0 10 10" fill="none"
+                  stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
+                  style={{ transform: optionalOpen ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 150ms' }}
+                  className="text-fg-subtle shrink-0"
+                >
+                  <path d="M2 3.5l3 3 3-3" />
+                </svg>
+                <span className="text-[12px] font-medium text-fg">Optional</span>
+                <span className="text-[11px] text-fg-subtle truncate">segmentation properties</span>
+              </span>
+            </button>
+
+            {optionalOpen && (
+              <div className="flex flex-col gap-[16px]">
 
             {/* PropertyTagSelect must NOT be inside <Field> (=<label>) — the browser would
                 re-dispatch the click to the first focusable child (✕ button), removing the tag. */}
-            <div className="flex flex-col gap-[6px]">
+            <div
+              className="flex flex-col gap-[6px] rounded-md border p-[10px] -m-[10px] transition-[background-color,border-color]"
+              style={highlightStyle(!!highlightedColumn && propertyList.includes(highlightedColumn))}
+            >
               <span className="flex items-center gap-[5px] text-[12px] font-medium text-fg-muted leading-none">
                 Properties to keep
                 <InfoTip text="Extra columns used for filtering and segmentation — e.g. 'country', 'plan', 'device'. Avoid ID columns with thousands of unique values." />
@@ -1155,93 +1628,33 @@ export default function Mapping() {
                 options={availableForProps}
                 onAdd={addProperty}
                 onRemove={removeProperty}
-                warnings={propertyWarnings}
+                highlightedValue={highlightedColumn}
+                onHighlight={setHighlightedColumn}
               />
+              <span className="text-[11px] text-fg-subtle">Used for segmentation breakdowns.</span>
             </div>
-          </div>
 
-          <DataReadinessPanel
-            report={quality}
-            loading={qualityLoading}
-            error={qualityError}
-            hasRequired={hasRequiredMapping}
-          />
+              </div>
+            )}
+          </div>
 
           {submitError && (
             <p className="text-[12px] text-danger">{submitError}</p>
           )}
         </aside>
 
-        {/* Preview — right column */}
-        <div className="flex flex-col gap-[10px] min-w-0">
-          <div className="flex items-baseline justify-between">
-            <span className="text-[12px] font-medium text-fg">Preview</span>
-            {totalRows != null && columns.length > 0 && (
-              <span className="text-[11px] text-fg-subtle">
-                First {rows.length} of {totalRows.toLocaleString()} rows · {columns.length} columns
-              </span>
-            )}
-          </div>
-          <div className="overflow-x-auto rounded-lg border border-border">
-            <div style={{ minWidth: 600 }}>
-              {columns.length > 0 ? (
-                <DataTable columns={tableColumns} rows={rows} compact />
-              ) : (
-                <div className="h-40 flex items-center justify-center text-[13px] text-fg-subtle">
-                  Loading…
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
       </div>
 
-      {/* Footer action bar */}
-      <div className="border-t border-border bg-bg px-7 py-[14px] flex items-center justify-between">
-        <span className="text-[13px] text-fg-muted">
-          We'll compute every metric on the rows you keep — no sampling, no LLM-guessing.
-        </span>
-        {submitStep !== 'idle' ? (
-          <div className="flex items-center gap-[10px]">
-            {(['saving', 'redirecting'] as const).map((step, i, arr) => {
-              const labels = { saving: 'Saving mapping', redirecting: 'Redirecting to dashboard' }
-              const isActive = submitStep === step
-              const isDone = arr.indexOf(submitStep) > i
-              return (
-                <div key={step} className="flex items-center gap-[10px]">
-                  <div className="flex items-center gap-[6px]">
-                    <span style={{ color: isDone ? 'var(--accent)' : isActive ? 'var(--fg)' : 'var(--fg-subtle)' }}>
-                      {isDone ? <CheckIcon /> : isActive ? <SpinnerIcon /> : (
-                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                          <circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="1.5" />
-                        </svg>
-                      )}
-                    </span>
-                    <span className="text-[13px]" style={{ color: isDone ? 'var(--accent)' : isActive ? 'var(--fg)' : 'var(--fg-subtle)' }}>
-                      {labels[step]}
-                    </span>
-                  </div>
-                  {i < arr.length - 1 && (
-                    <svg width="16" height="1" viewBox="0 0 16 1"><line x1="0" y1="0.5" x2="16" y2="0.5" stroke="var(--border)" strokeWidth="1.5" strokeDasharray="3 2" /></svg>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={() => navigate(-1)}>Cancel</Button>
-            <Button
-              variant="primary"
-              disabled={!canSubmit}
-              onClick={handleSubmit}
-              trailing={<ArrowRightIcon />}
-            >
-              Analyze
-            </Button>
-          </div>
-        )}
-      </div>
+      <BottomReadinessDock
+        report={quality}
+        loading={qualityLoading}
+        error={qualityError}
+        hasRequired={hasRequiredMapping}
+        canSubmit={canSubmit}
+        submitStep={submitStep}
+        onCancel={() => navigate(-1)}
+        onAnalyze={handleSubmit}
+      />
     </div>
   )
 }

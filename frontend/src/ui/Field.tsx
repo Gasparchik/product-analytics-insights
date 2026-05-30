@@ -3,7 +3,7 @@ import { cn } from './utils'
 import { InfoTip } from './InfoTip'
 
 export interface FieldProps {
-  label?: string
+  label?: ReactNode
   hint?: string
   error?: string
   tooltip?: string
