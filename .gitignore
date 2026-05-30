@@ -10,6 +10,7 @@ backend/data/*
 dist/
 .DS_Store
 *.log
+*.log.err
 vite_*.txt
 *_log*.txt
 demo_mod.md
